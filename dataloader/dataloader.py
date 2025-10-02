@@ -11,7 +11,7 @@ class DataLoader():
         self.data_path = os.path.join(self.root_path, "data")
         self.data = {}
     
-    def reverse_dict(sel, d):
+    def reverse_dict(self, d):
         reversed_d = {}
         for key, value in d.items():
             reversed_d[value] = key
