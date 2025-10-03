@@ -1,75 +1,185 @@
 import numpy as np
 import os
 import pickle
+from enum import Enum
 from PIL import Image
+from typing import Dict, Any, Tuple, Iterator, Optional
 
 
-class DataLoader():
+class DatasetType(Enum):
+    BBDD = "BBDD"
+    QSD1_W1 = "qsd1_w1"
+
+
+class DataLoader:
+    """Load and manage BBDD and qsd1_w1 computer vision datasets."""
+
     def __init__(self):
         current_file = os.path.abspath(__file__)
         self.root_path = os.path.dirname(os.path.dirname(current_file))
         self.data_path = os.path.join(self.root_path, "data")
-        self.data = {}
-    
-    def reverse_dict(self, d):
-        reversed_d = {}
-        for key, value in d.items():
-            reversed_d[value] = key
-        return reversed_d
+        self.data: Dict[int, Dict[str, Any]] = {}
+        self.dataset_type: Optional[DatasetType] = None
 
-    def load_dataset(self, dataset):
-        """
-        Args:
-            dataset (string): "BBDD" or "qsd1_w1"
-        """
+    def _reverse_dict(self, d: Dict[Any, Any]) -> Dict[Any, Any]:
+        return {value: key for key, value in d.items()}
+
+    def load_dataset(self, dataset: DatasetType) -> None:
+        """Load dataset by DatasetType enum."""
         self.clear_dataset()
-        assert dataset in ["BBDD", "qsd1_w1"]
-        
-        dataset_path = os.path.join(self.data_path, dataset)
-        files = [f for f in os.listdir(dataset_path) \
-                 if os.path.isfile(os.path.join(dataset_path, f))]
-        names = set([f.split(".")[0] for f in files])
-        
-        if dataset == "BBDD":
-            # Load relationships
-            with open(os.path.join(dataset_path, "relationships.pkl"), 'rb') as f:
+
+        if dataset == DatasetType.BBDD:
+            self.load_BBDD()
+        elif dataset == DatasetType.QSD1_W1:
+            self.load_qsd1_w1()
+
+        self.dataset_type = dataset
+
+    def load_BBDD(self) -> None:
+        """Load BBDD dataset: JPG images, TXT metadata, and relationships.pkl."""
+        dataset_path = os.path.join(self.data_path, "BBDD")
+
+        if not os.path.exists(dataset_path):
+            raise FileNotFoundError(f"BBDD dataset path not found: {dataset_path}")
+
+        relationships_file = os.path.join(dataset_path, "relationships.pkl")
+        if not os.path.exists(relationships_file):
+            raise FileNotFoundError(
+                f"Relationships file not found: {relationships_file}"
+            )
+
+        try:
+            with open(relationships_file, "rb") as f:
                 relationships = pickle.load(f)
-            relationships = self.reverse_dict(relationships)
-            names.remove("relationships")
-            # Load images
-            for name in names:
-                id = int(name.split("_")[1])
-                png_filename = os.path.join(dataset_path, name+".png")
-                image = np.array(Image.open(png_filename))
-                txt_filename = os.path.join(dataset_path, name+".txt")
-                with open(txt_filename, "r") as f:
-                    info = f.readline().rstrip("\n")
-                
-                self.data[id] = {
+            relationships = self._reverse_dict(relationships)
+        except Exception as e:
+            raise Exception(f"Error loading relationships: {e}")
+
+        try:
+            files = [
+                f
+                for f in os.listdir(dataset_path)
+                if os.path.isfile(os.path.join(dataset_path, f))
+                and not f.endswith(".pkl")
+            ]
+            names = set(f.split(".")[0] for f in files)
+        except Exception as e:
+            raise Exception(f"Error reading dataset directory: {e}")
+
+        for name in names:
+            try:
+                if not name.startswith("bbdd_"):
+                    continue
+
+                id_str = name.split("_")[1]
+                image_id = int(id_str)
+
+                jpg_filename = os.path.join(dataset_path, f"{name}.jpg")
+                if not os.path.exists(jpg_filename):
+                    print(f"Warning: JPG file not found for {name}, skipping...")
+                    continue
+
+                image = np.array(Image.open(jpg_filename))
+
+                txt_filename = os.path.join(dataset_path, f"{name}.txt")
+                if not os.path.exists(txt_filename):
+                    info = ""
+                else:
+                    try:
+                        with open(
+                            txt_filename, "r", encoding="utf-8", errors="ignore"
+                        ) as f:
+                            info = f.readline().strip()
+                    except Exception:
+                        try:
+                            with open(txt_filename, "r", encoding="latin-1") as f:
+                                info = f.readline().strip()
+                        except Exception:
+                            info = ""
+
+                relationship = relationships.get(image_id, None)
+
+                self.data[image_id] = {
                     "image": image,
                     "info": info,
-                    "relationship": relationships[id],
+                    "relationship": relationship,
                 }
 
-        elif dataset == "qsd1_w1":
-            pass
+            except Exception as e:
+                print(f"Warning: Error processing {name}: {e}")
+                continue
 
-    def clear_dataset(self):
+        print(f"Successfully loaded {len(self.data)} images from BBDD dataset")
+
+    def load_qsd1_w1(self) -> None:
+        """Load qsd1_w1 dataset: JPG images and gt_corresps.pkl."""
+        dataset_path = os.path.join(self.data_path, "qsd1_w1")
+
+        if not os.path.exists(dataset_path):
+            raise FileNotFoundError(f"qsd1_w1 dataset path not found: {dataset_path}")
+
+        gt_file = os.path.join(dataset_path, "gt_corresps.pkl")
+        gt_correspondences = []
+
+        if os.path.exists(gt_file):
+            try:
+                with open(gt_file, "rb") as f:
+                    gt_correspondences = pickle.load(f)
+            except Exception as e:
+                print(f"Warning: Error loading ground truth correspondences: {e}")
+
+        try:
+            files = [
+                f
+                for f in os.listdir(dataset_path)
+                if f.endswith(".jpg") and os.path.isfile(os.path.join(dataset_path, f))
+            ]
+
+            for filename in files:
+                try:
+                    name_without_ext = filename.split(".")[0]
+                    image_id = int(name_without_ext)
+
+                    jpg_filename = os.path.join(dataset_path, filename)
+                    image = np.array(Image.open(jpg_filename))
+
+                    gt_correspondence = (
+                        gt_correspondences[image_id]
+                        if image_id < len(gt_correspondences)
+                        else None
+                    )
+
+                    self.data[image_id] = {
+                        "image": image,
+                        "info": f"Query image {name_without_ext}",
+                        "relationship": gt_correspondence,
+                    }
+
+                except Exception as e:
+                    print(f"Warning: Error processing {filename}: {e}")
+                    continue
+
+        except Exception as e:
+            raise Exception(f"Error reading qsd1_w1 directory: {e}")
+
+        print(f"Successfully loaded {len(self.data)} images from qsd1_w1 dataset")
+
+    def clear_dataset(self) -> None:
         self.data = {}
-    
-    def iterate_images(self):
-        """
-        Iterate over all images in the dataset.
-        Yields:
-            tuple: (id, image, info, relationship)
-        """
-        for id, values in self.data.items():
-            yield id, values["image"], values["info"], values["relationship"]
+        self.dataset_type = None
 
+    def iterate_images(self) -> Iterator[Tuple[int, np.ndarray, str, Any]]:
+        """Yield (id, image, info, relationship) for each loaded image."""
+        for image_id, values in self.data.items():
+            yield image_id, values["image"], values["info"], values["relationship"]
 
-if __name__ == "__main__":
-    dl = DataLoader()
-    print(dl.root_path)
-    dl.load_dataset(dataset="BBDD")
-    for id, image, info, relationship in dl.iterate_images():
-        print(id, image.shape, info, relationship)
+    def get_image_by_id(self, image_id: int) -> Optional[Dict[str, Any]]:
+        return self.data.get(image_id)
+
+    def get_dataset_info(self) -> Dict[str, Any]:
+        return {
+            "dataset_type": self.dataset_type.value if self.dataset_type else None,
+            "num_images": len(self.data),
+            "image_ids": list(self.data.keys()) if self.data else [],
+            "data_path": self.data_path,
+        }

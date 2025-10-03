@@ -1,9 +1,14 @@
 """
 From: https://github.com/benhamner/Metrics
 """
-import numpy as np
 
-def apk(actual, predicted, k=10):
+import numpy as np
+from typing import List, Union
+
+
+def apk(
+    actual: List[Union[int, str]], predicted: List[Union[int, str]], k: int = 10
+) -> float:
     """
     Computes the average precision at k.
 
@@ -25,23 +30,28 @@ def apk(actual, predicted, k=10):
             The average precision at k over the input lists
 
     """
-    if len(predicted)>k:
+    if len(predicted) > k:
         predicted = predicted[:k]
 
     score = 0.0
     num_hits = 0.0
 
-    for i,p in enumerate(predicted):
+    for i, p in enumerate(predicted):
         if p in actual and p not in predicted[:i]:
             num_hits += 1.0
-            score += num_hits / (i+1.0)
+            score += num_hits / (i + 1.0)
 
     if not actual:
         return 0.0
 
     return score / min(len(actual), k)
 
-def mapk(actual, predicted, k=10):
+
+def mapk(
+    actual: List[List[Union[int, str]]],
+    predicted: List[List[Union[int, str]]],
+    k: int = 10,
+) -> float:
     """
     Computes the mean average precision at k.
 
@@ -51,7 +61,7 @@ def mapk(actual, predicted, k=10):
     Parameters
     ----------
     actual : list
-             A list of lists of elements that are to be predicted 
+             A list of lists of elements that are to be predicted
              (order doesn't matter in the lists)
     predicted : list
                 A list of lists of predicted elements
@@ -65,4 +75,4 @@ def mapk(actual, predicted, k=10):
             The mean average precision at k over the input lists
 
     """
-    return np.mean([apk(a,p,k) for a,p in zip(actual, predicted)])
+    return np.mean([apk(a, p, k) for a, p in zip(actual, predicted)])
