@@ -15,28 +15,6 @@ class ImageRetrievalSystem:
         self.qsd1_descriptors: Dict[int, np.ndarray] = {}
         self.ground_truth: List[List[int]] = []
 
-    def _compute_histogram_grayscale(self, image: np.ndarray) -> np.ndarray:
-        if image.dtype != np.uint8:
-            image = image.astype(np.uint8)
-
-        if image.ndim == 3:
-            gray_image = np.array(Image.fromarray(image).convert("L"), dtype=np.uint8)
-        else:
-            gray_image = image
-
-        histogram = histogram_1_channel(gray_image, bins=256).astype(np.float32)
-        return histogram / np.sum(histogram)
-
-    def _compute_histogram_rgb(self, image: np.ndarray) -> np.ndarray:
-        if image.dtype != np.uint8:
-            image = image.astype(np.uint8)
-
-        if image.ndim == 2:
-            image = np.stack([image, image, image], axis=2)
-
-        histogram = histogram_3_channels(image, bins=256).astype(np.float32)
-        return histogram / np.sum(histogram)
-
     def load_datasets(self) -> None:
         print("Loading BBDD dataset...")
         self.dataloader.load_dataset(DatasetType.BBDD)
@@ -54,9 +32,9 @@ class ImageRetrievalSystem:
 
         for image_id, image, info, relationship in self.dataloader.iterate_images():
             if method == "grayscale":
-                descriptor = self._compute_histogram_grayscale(image)
+                descriptor = histogram_1_channel(image)
             elif method == "rgb":
-                descriptor = self._compute_histogram_rgb(image)
+                descriptor = histogram_3_channels(image)
             else:
                 raise ValueError(f"Unknown method: {method}")
 
@@ -71,9 +49,9 @@ class ImageRetrievalSystem:
         self.ground_truth = []
         for image_id, image, info, relationship in self.dataloader.iterate_images():
             if method == "grayscale":
-                descriptor = self._compute_histogram_grayscale(image)
+                descriptor = histogram_1_channel(image)
             elif method == "rgb":
-                descriptor = self._compute_histogram_rgb(image)
+                descriptor = histogram_3_channels(image)
             else:
                 raise ValueError(f"Unknown method: {method}")
 

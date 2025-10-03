@@ -1,32 +1,54 @@
 import numpy as np
 from typing import Tuple
+from PIL import Image
 
 
 def histogram_1_channel(img: np.ndarray, bins: int = 256) -> np.ndarray:
     """
     Args:
-        img (np.ndarray): Image with shape (height, width), dtype=uint8, range=[0,255].
+        img (np.ndarray): Image with shape (height, width) or (height, width, 3), any dtype.
         bins (int): Number of bins of the returned histogram
     Returns:
-        (np.ndarray): 1D vector of img's histogram.
+        (np.ndarray): Normalized 1D vector of img's histogram.
     """
-    assert img.dtype == np.uint8, "Image must be of dtype uint8"
-    assert img.ndim == 2, "Image must be (H, W)"
+    # Convert to uint8 if needed
+    if img.dtype != np.uint8:
+        img = img.astype(np.uint8)
+
+    # Convert to grayscale if RGB
+    if img.ndim == 3:
+        img = np.array(Image.fromarray(img).convert("L"), dtype=np.uint8)
+    elif img.ndim != 2:
+        raise ValueError("Image must be 2D (grayscale) or 3D (RGB)")
+
     pixel_intensities = img.flatten()
-    return np.bincount(pixel_intensities, minlength=bins)
+    histogram = np.bincount(pixel_intensities, minlength=bins).astype(np.float32)
+    return histogram / np.sum(histogram)
 
 
 def histogram_3_channels(img: np.ndarray, bins: int = 256) -> np.ndarray:
     """
     Args:
-        img (np.ndarray): Image with shape (height, width, 3), dtype=uint8, range=[0,255].
+        img (np.ndarray): Image with shape (height, width) or (height, width, 3), any dtype.
         bins (int): Number of bins of the returned histogram
     Returns:
-        (np.ndarray): 1D vector with 3 concatenated histograms, 1 per each channel of img.
+        (np.ndarray): Normalized 1D vector with 3 concatenated histograms, 1 per each channel of img.
     """
-    assert img.dtype == np.uint8, "Image must be of dtype uint8"
-    assert img.ndim == 3 and img.shape[2] == 3, "Image must be (H, W, 3)"
-    a = histogram_1_channel(img[:, :, 0], bins=bins)
-    b = histogram_1_channel(img[:, :, 1], bins=bins)
-    c = histogram_1_channel(img[:, :, 2], bins=bins)
-    return np.concatenate([a, b, c], axis=0)
+    # Convert to uint8 if needed
+    if img.dtype != np.uint8:
+        img = img.astype(np.uint8)
+
+    # Convert grayscale to RGB if needed
+    if img.ndim == 2:
+        img = np.stack([img, img, img], axis=2)
+    elif img.ndim != 3 or img.shape[2] != 3:
+        raise ValueError("Image must be 2D (grayscale) or 3D (RGB)")
+
+    # Compute histogram for each channel separately (without normalization)
+    a = np.bincount(img[:, :, 0].flatten(), minlength=bins).astype(np.float32)
+    b = np.bincount(img[:, :, 1].flatten(), minlength=bins).astype(np.float32)
+    c = np.bincount(img[:, :, 2].flatten(), minlength=bins).astype(np.float32)
+
+    # Concatenate and normalize the combined histogram
+    histogram = np.concatenate([a, b, c], axis=0)
+    return histogram / np.sum(histogram)
