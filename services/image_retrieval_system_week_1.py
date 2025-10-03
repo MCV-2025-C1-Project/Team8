@@ -6,14 +6,13 @@ from PIL import Image
 from typing import List, Tuple, Dict, Any
 from enum import Enum
 from dataloader.dataloader import DataLoader, DatasetType
-from utils.descriptors import histogram_rgb, histogram_hsv
+from utils.descriptors import histogram_lab, histogram_hsv
 from utils.measures import hist_intersect
 from utils.metrics import mapk
 
 
 class DescriptorMethod(Enum):
-    GRAYSCALE = "grayscale"
-    RGB = "rgb"
+    LAB = "lab"
     HSV = "hsv"
 
 
@@ -41,8 +40,8 @@ class ImageRetrievalSystem:
         self.dataloader.load_dataset(DatasetType.BBDD)
 
         for image_id, image, info, relationship in self.dataloader.iterate_images():
-            if method == DescriptorMethod.RGB:
-                descriptor = histogram_rgb(image)
+            if method == DescriptorMethod.LAB:
+                descriptor = histogram_lab(image)
             elif method == DescriptorMethod.HSV:
                 descriptor = histogram_hsv(image)
             else:
@@ -58,8 +57,8 @@ class ImageRetrievalSystem:
 
         self.ground_truth = []
         for image_id, image, info, relationship in self.dataloader.iterate_images():
-            if method == DescriptorMethod.RGB:
-                descriptor = histogram_rgb(image)
+            if method == DescriptorMethod.LAB:
+                descriptor = histogram_lab(image)
             elif method == DescriptorMethod.HSV:
                 descriptor = histogram_hsv(image)
             else:
@@ -100,7 +99,7 @@ class ImageRetrievalSystem:
         return mapk(self.ground_truth, predictions, k)
 
     def save_results(self, predictions: List[List[int]], method: DescriptorMethod, metrics: Dict[str, float] = None) -> str:
-        if method == DescriptorMethod.RGB:
+        if method == DescriptorMethod.LAB:
             method_name = "method1"
         elif method == DescriptorMethod.HSV:
             method_name = "method2"

@@ -9,7 +9,7 @@ def main():
     print("IMAGE RETRIEVAL SYSTEM - WEEK 1")
     print("=" * 60)
     print("Evaluating QSD1 vs BBDD datasets")
-    print("Methods: RGB and HSV Histograms")
+    print("Methods: CieLab and HSV Histograms")
     print("=" * 60)
 
     retrieval_system = ImageRetrievalSystem()
@@ -19,9 +19,9 @@ def main():
 
     print("\nRunning evaluations...")
     
-    # Method 1: RGB Histogram  
-    rgb_results = retrieval_system.run_evaluation(
-        DescriptorMethod.RGB, 
+    # Method 1: CieLab Histogram  
+    lab_results = retrieval_system.run_evaluation(
+        DescriptorMethod.LAB, 
         save_results=True
     )
     
@@ -35,21 +35,21 @@ def main():
     print("FINAL RESULTS SUMMARY")
     print(f"{'='*60}")
     
-    print(f"Method 1 (RGB Histogram):")
-    print(f"   mAP@1: {rgb_results['mAP@1']:.4f}")
-    print(f"   mAP@5: {rgb_results['mAP@5']:.4f}")
+    print(f"Method 1 (CieLab Histogram):")
+    print(f"   mAP@1: {lab_results['mAP@1']:.4f}")
+    print(f"   mAP@5: {lab_results['mAP@5']:.4f}")
     
     print(f"\nMethod 2 (HSV Histogram):")
     print(f"   mAP@1: {hsv_results['mAP@1']:.4f}")
     print(f"   mAP@5: {hsv_results['mAP@5']:.4f}")
 
     # Determine best method
-    if hsv_results['mAP@1'] > rgb_results['mAP@1']:
+    if hsv_results['mAP@1'] > lab_results['mAP@1']:
         best_method = "HSV"
         best_score = hsv_results['mAP@1']
     else:
-        best_method = "RGB"
-        best_score = rgb_results['mAP@1']
+        best_method = "CieLab"
+        best_score = lab_results['mAP@1']
     
     print(f"\nBest performing method: {best_method} (mAP@1: {best_score:.4f})")
     print(f"\nResults saved to results/week1/QST1/ directory")

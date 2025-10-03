@@ -55,6 +55,37 @@ def histogram_rgb(img: np.ndarray, bins: int = 256) -> np.ndarray:
     return histogram / np.sum(histogram)
 
 
+def histogram_lab(img: np.ndarray, bins: int = 256) -> np.ndarray:
+    """
+    Args:
+        img (np.ndarray): Image with shape (height, width) or (height, width, 3), any dtype.
+        bins (int): Number of bins of the returned histogram
+    Returns:
+        (np.ndarray): Normalized 1D vector with 3 concatenated L*a*b* histograms.
+    """
+    # Convert to uint8 if needed
+    if img.dtype != np.uint8:
+        img = img.astype(np.uint8)
+
+    # Convert grayscale to RGB if needed
+    if img.ndim == 2:
+        img = np.stack([img, img, img], axis=2)
+    elif img.ndim != 3 or img.shape[2] != 3:
+        raise ValueError("Image must be 2D (grayscale) or 3D (RGB)")
+
+    # Convert RGB to L*a*b*
+    lab_img = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
+    
+    # Compute histogram for each L*a*b* channel separately
+    l_hist = np.bincount(lab_img[:, :, 0].flatten(), minlength=bins).astype(np.float32)
+    a_hist = np.bincount(lab_img[:, :, 1].flatten(), minlength=bins).astype(np.float32)
+    b_hist = np.bincount(lab_img[:, :, 2].flatten(), minlength=bins).astype(np.float32)
+
+    # Concatenate and normalize the combined histogram
+    histogram = np.concatenate([l_hist, a_hist, b_hist], axis=0)
+    return histogram / np.sum(histogram)
+
+
 def histogram_hsv(img: np.ndarray, bins: int = 256) -> np.ndarray:
     """
     Args:
