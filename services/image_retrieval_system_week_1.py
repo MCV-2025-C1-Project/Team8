@@ -1,9 +1,12 @@
 import numpy as np
+import os
+import pickle
+import json
 from PIL import Image
 from typing import List, Tuple, Dict, Any
 from enum import Enum
 from dataloader.dataloader import DataLoader, DatasetType
-from utils.descriptors import histogram_1_channel, histogram_3_channels
+from utils.descriptors import histogram_rgb, histogram_hsv
 from utils.measures import hist_intersect
 from utils.metrics import mapk
 
@@ -11,6 +14,7 @@ from utils.metrics import mapk
 class DescriptorMethod(Enum):
     GRAYSCALE = "grayscale"
     RGB = "rgb"
+    HSV = "hsv"
 
 
 class ImageRetrievalSystem:
@@ -37,10 +41,10 @@ class ImageRetrievalSystem:
         self.dataloader.load_dataset(DatasetType.BBDD)
 
         for image_id, image, info, relationship in self.dataloader.iterate_images():
-            if method == DescriptorMethod.GRAYSCALE:
-                descriptor = histogram_1_channel(image)
-            elif method == DescriptorMethod.RGB:
-                descriptor = histogram_3_channels(image)
+            if method == DescriptorMethod.RGB:
+                descriptor = histogram_rgb(image)
+            elif method == DescriptorMethod.HSV:
+                descriptor = histogram_hsv(image)
             else:
                 raise ValueError(f"Unknown method: {method}")
 
@@ -54,10 +58,10 @@ class ImageRetrievalSystem:
 
         self.ground_truth = []
         for image_id, image, info, relationship in self.dataloader.iterate_images():
-            if method == DescriptorMethod.GRAYSCALE:
-                descriptor = histogram_1_channel(image)
-            elif method == DescriptorMethod.RGB:
-                descriptor = histogram_3_channels(image)
+            if method == DescriptorMethod.RGB:
+                descriptor = histogram_rgb(image)
+            elif method == DescriptorMethod.HSV:
+                descriptor = histogram_hsv(image)
             else:
                 raise ValueError(f"Unknown method: {method}")
 
@@ -95,7 +99,35 @@ class ImageRetrievalSystem:
     def evaluate_map_at_k(self, predictions: List[List[int]], k: int) -> float:
         return mapk(self.ground_truth, predictions, k)
 
-    def run_evaluation(self, method: DescriptorMethod) -> Dict[str, float]:
+    def save_results(self, predictions: List[List[int]], method: DescriptorMethod, metrics: Dict[str, float] = None) -> str:
+        if method == DescriptorMethod.RGB:
+            method_name = "method1"
+        elif method == DescriptorMethod.HSV:
+            method_name = "method2"
+        else:
+            raise ValueError(f"Unknown method: {method}")
+            
+        results_dir = os.path.join("results", "week1", "QST1", method_name)
+        os.makedirs(results_dir, exist_ok=True)
+        
+        # Save predictions as .pkl file (list of lists with integer image IDs)
+        pkl_filepath = os.path.join(results_dir, "result.pkl")
+        with open(pkl_filepath, 'wb') as f:
+            pickle.dump(predictions, f)
+        
+        # Save metrics as JSON file (human-readable)
+        if metrics:
+            json_filepath = os.path.join(results_dir, "metrics.json")
+            with open(json_filepath, 'w') as f:
+                json.dump(metrics, f, indent=2)
+            print(f"Metrics saved to: {json_filepath}")
+        
+        print(f"Results saved to: {pkl_filepath}")
+        print(f"Format: List of {len(predictions)} queries, each with K=10 best results")
+        return pkl_filepath
+
+    def run_evaluation(self, method: DescriptorMethod, save_results: bool = True) -> Dict[str, float]:
+        """Run complete evaluation for a method."""
         print(f"\n{'='*60}")
         print(f"EVALUATION: {method.value.upper()} METHOD")
         print(f"{'='*60}")
@@ -106,7 +138,11 @@ class ImageRetrievalSystem:
         self.compute_bbdd_descriptors(method)
         self.compute_qsd1_descriptors(method)
 
-        predictions_k5 = self.retrieve_similar_images(k=5)
+        # Generate predictions with K=10 for competition format
+        predictions_k10 = self.retrieve_similar_images(k=10)
+        
+        # Also compute K=5 for evaluation metrics
+        predictions_k5 = [pred[:5] for pred in predictions_k10]
 
         map_at_1 = self.evaluate_map_at_k(predictions_k5, k=1)
         map_at_5 = self.evaluate_map_at_k(predictions_k5, k=5)
@@ -115,30 +151,9 @@ class ImageRetrievalSystem:
 
         print(f"mAP@1: {map_at_1:.4f}")
         print(f"mAP@5: {map_at_5:.4f}")
+        
+        if save_results:
+            self.save_results(predictions_k10, method, results)
 
         return results
 
-
-def main() -> None:
-    print("Image Retrieval System - QSD1 vs BBDD")
-    print("=" * 60)
-
-    retrieval_system = ImageRetrievalSystem()
-    retrieval_system.load_datasets()
-
-    method1_results = retrieval_system.run_evaluation(DescriptorMethod.GRAYSCALE)
-    method2_results = retrieval_system.run_evaluation(DescriptorMethod.RGB)
-
-    print(f"\n{'='*60}")
-    print("FINAL RESULTS")
-    print(f"{'='*60}")
-    print(f"Method 1 (Grayscale Histogram):")
-    print(f"  mAP@1: {method1_results['mAP@1']:.4f}")
-    print(f"  mAP@5: {method1_results['mAP@5']:.4f}")
-    print(f"\nMethod 2 (RGB Histogram):")
-    print(f"  mAP@1: {method2_results['mAP@1']:.4f}")
-    print(f"  mAP@5: {method2_results['mAP@5']:.4f}")
-
-
-if __name__ == "__main__":
-    main()
