@@ -1,10 +1,16 @@
 import numpy as np
 from PIL import Image
 from typing import List, Tuple, Dict, Any
+from enum import Enum
 from dataloader.dataloader import DataLoader, DatasetType
 from utils.descriptors import histogram_1_channel, histogram_3_channels
 from utils.measures import hist_intersect
 from utils.metrics import mapk
+
+
+class DescriptorMethod(Enum):
+    GRAYSCALE = "grayscale"
+    RGB = "rgb"
 
 
 class ImageRetrievalSystem:
@@ -26,14 +32,14 @@ class ImageRetrievalSystem:
         qsd1_info = self.dataloader.get_dataset_info()
         print(f"Loaded {qsd1_info['num_images']} QSD1 images")
 
-    def compute_bbdd_descriptors(self, method: str) -> None:
-        print(f"Computing BBDD descriptors using {method}...")
+    def compute_bbdd_descriptors(self, method: DescriptorMethod) -> None:
+        print(f"Computing BBDD descriptors using {method.value}...")
         self.dataloader.load_dataset(DatasetType.BBDD)
 
         for image_id, image, info, relationship in self.dataloader.iterate_images():
-            if method == "grayscale":
+            if method == DescriptorMethod.GRAYSCALE:
                 descriptor = histogram_1_channel(image)
-            elif method == "rgb":
+            elif method == DescriptorMethod.RGB:
                 descriptor = histogram_3_channels(image)
             else:
                 raise ValueError(f"Unknown method: {method}")
@@ -42,15 +48,15 @@ class ImageRetrievalSystem:
 
         print(f"Computed {len(self.bbdd_descriptors)} BBDD descriptors")
 
-    def compute_qsd1_descriptors(self, method: str) -> None:
-        print(f"Computing QSD1 descriptors using {method}...")
+    def compute_qsd1_descriptors(self, method: DescriptorMethod) -> None:
+        print(f"Computing QSD1 descriptors using {method.value}...")
         self.dataloader.load_dataset(DatasetType.QSD1_W1)
 
         self.ground_truth = []
         for image_id, image, info, relationship in self.dataloader.iterate_images():
-            if method == "grayscale":
+            if method == DescriptorMethod.GRAYSCALE:
                 descriptor = histogram_1_channel(image)
-            elif method == "rgb":
+            elif method == DescriptorMethod.RGB:
                 descriptor = histogram_3_channels(image)
             else:
                 raise ValueError(f"Unknown method: {method}")
@@ -89,9 +95,9 @@ class ImageRetrievalSystem:
     def evaluate_map_at_k(self, predictions: List[List[int]], k: int) -> float:
         return mapk(self.ground_truth, predictions, k)
 
-    def run_evaluation(self, method: str) -> Dict[str, float]:
+    def run_evaluation(self, method: DescriptorMethod) -> Dict[str, float]:
         print(f"\n{'='*60}")
-        print(f"EVALUATION: {method.upper()} METHOD")
+        print(f"EVALUATION: {method.value.upper()} METHOD")
         print(f"{'='*60}")
 
         self.bbdd_descriptors.clear()
@@ -120,8 +126,8 @@ def main() -> None:
     retrieval_system = ImageRetrievalSystem()
     retrieval_system.load_datasets()
 
-    method1_results = retrieval_system.run_evaluation("grayscale")
-    method2_results = retrieval_system.run_evaluation("rgb")
+    method1_results = retrieval_system.run_evaluation(DescriptorMethod.GRAYSCALE)
+    method2_results = retrieval_system.run_evaluation(DescriptorMethod.RGB)
 
     print(f"\n{'='*60}")
     print("FINAL RESULTS")
