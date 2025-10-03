@@ -26,6 +26,53 @@ Update the requirements.txt running:
 pip freeze > requirements.txt
 ```
 
+## Testing
+
+This project includes two types of tests:
+
+### Unit Tests
+
+Fast, isolated tests for individual functions and classes. Run with pytest:
+
+```bash
+# Run all unit tests
+python -m pytest tests/unit/
+
+# Run with verbose output
+python -m pytest tests/unit/ -v
+
+# Run specific test file
+python -m pytest tests/unit/test_measures.py
+```
+
+Unit tests are located in `tests/unit/` and test:
+- Distance measures (euclidean, L1, chi-squared, histogram intersection, hellinger kernel)
+- Metrics functions (APK, mAP@K)
+
+### Integration Scripts
+
+Comprehensive tests that use real datasets and test the complete system. Run individually:
+
+```bash
+# Test BBDD dataset loading
+python tests/integration/test_load_BBDD.py
+
+# Test QSD1 dataset loading  
+python tests/integration/test_load_qsd1_w1.py
+
+# Test histogram descriptors
+python tests/integration/test_histograms.py
+
+# Test distance measures with real data
+python tests/integration/test_measures.py
+```
+
+Integration scripts are located in `tests/integration/` and test:
+- Dataset loading and validation
+- Histogram computation with real images
+- Distance measure calculations with actual data
+- Complete image retrieval pipeline
+
 ## Usage
 
 ```python
