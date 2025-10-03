@@ -11,12 +11,19 @@ Ideally, install them within a virtual environment. Create and activate it with:
 ```bash
 python3 -m venv venv/
 source myenv/bin/activate
+# Windows: venv\Scripts\Activate
 ```
 
 And then, from the root of the project, install the dependencies with:
 
 ```bash
 pip install -r requirements.txt
+```
+
+Update the requirements.txt running:
+
+```bash
+pip freeze > requirements.txt
 ```
 
 ## Usage
