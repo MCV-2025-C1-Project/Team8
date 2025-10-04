@@ -9,7 +9,7 @@ from utils.measures import SimilarityMeasure
 def main():
     print("IMAGE RETRIEVAL SYSTEM - WEEK 1")
     print("=" * 60)
-    print("Evaluating QSD1 vs BBDD datasets")
+    print("Using QSD1 & BBDD datasets")
     print("Methods: CieLab and HSV Histograms")
     print("=" * 60)
 
