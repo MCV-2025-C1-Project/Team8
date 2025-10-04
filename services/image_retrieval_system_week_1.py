@@ -7,7 +7,7 @@ from typing import List, Tuple, Dict, Any
 from enum import Enum
 from dataloader.dataloader import DataLoader, DatasetType
 from utils.descriptors import histogram_lab, histogram_hsv
-from utils.measures import hist_intersect
+from utils.measures import MeasureType, SimilarityMeasure, hist_intersect
 from utils.metrics import mapk
 
 
@@ -62,7 +62,7 @@ class ImageRetrievalSystem:
                 self.ground_truth.append([])
         print(f"Loaded ground truth for {len(self.ground_truth)} QSD1 images")
 
-    def retrieve_similar_images(self, k: int = 5) -> List[List[int]]:
+    def retrieve_similar_images(self, measure: SimilarityMeasure, k: int = 5) -> List[List[int]]:
         predictions = []
 
         for qsd1_id in sorted(self.qsd1_descriptors.keys()):
@@ -70,11 +70,12 @@ class ImageRetrievalSystem:
             similarities = []
 
             for bbdd_id, bbdd_desc in self.bbdd_descriptors.items():
-                similarity = hist_intersect(qsd1_desc, bbdd_desc)
-                similarities.append(
-                    (-similarity, bbdd_id)
-                )  # Negative for sorting (highest similarity first)
-
+                similarity = measure.func(qsd1_desc, bbdd_desc)
+                if measure.measure_type == MeasureType.SIMILARITY:
+                    similarities.append((-similarity, bbdd_id))  # Negative for sorting (highest similarity first)
+                else: # measure.measure_type == MeasureType.DISTANCE:
+                    similarities.append((similarity, bbdd_id))   # Lower distance is better
+    
             similarities.sort(key=lambda x: x[0])
             top_k_ids = [bbdd_id for _, bbdd_id in similarities[:k]]
             predictions.append(top_k_ids)
@@ -111,7 +112,7 @@ class ImageRetrievalSystem:
         print(f"Format: List of {len(predictions)} queries, each with K=10 best results")
         return pkl_filepath
 
-    def run_evaluation(self, method: DescriptorMethod, save_results: bool = True) -> Dict[str, float]:
+    def run_evaluation(self, method: DescriptorMethod, measure: SimilarityMeasure, save_results: bool = True) -> Dict[str, float]:
         """Run complete evaluation for a method."""
         print(f"\n{'='*60}")
         print(f"EVALUATION: {method.value.upper()} METHOD")
@@ -129,7 +130,7 @@ class ImageRetrievalSystem:
         self.compute_descriptors(DatasetType.QSD1_W1, method)
 
         # Generate predictions with K=10 for competition format
-        predictions_k10 = self.retrieve_similar_images(k=10)
+        predictions_k10 = self.retrieve_similar_images(measure, k=10)
         
         # Also compute K=5 for evaluation metrics
         predictions_k5 = [pred[:5] for pred in predictions_k10]

@@ -4,6 +4,7 @@ Main entry point for the Image Retrieval System
 """
 
 from services.image_retrieval_system_week_1 import ImageRetrievalSystem, DescriptorMethod
+from utils.measures import SimilarityMeasure
 
 def main():
     print("IMAGE RETRIEVAL SYSTEM - WEEK 1")
@@ -18,13 +19,15 @@ def main():
     
     # Method 1: CieLab Histogram  
     lab_results = retrieval_system.run_evaluation(
-        DescriptorMethod.LAB, 
+        DescriptorMethod.LAB,
+        SimilarityMeasure.HIST_INTERSECT,
         save_results=True
     )
     
     # Method 2: HSV Histogram
     hsv_results = retrieval_system.run_evaluation(
-        DescriptorMethod.HSV, 
+        DescriptorMethod.HSV,
+        SimilarityMeasure.HIST_INTERSECT,
         save_results=True
     )
 
