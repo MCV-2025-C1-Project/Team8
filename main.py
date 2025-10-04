@@ -14,9 +14,6 @@ def main():
 
     retrieval_system = ImageRetrievalSystem()
 
-    print("\nLoading datasets...")
-    retrieval_system.load_datasets()
-
     print("\nRunning evaluations...")
     
     # Method 1: CieLab Histogram  

@@ -19,27 +19,17 @@ class DescriptorMethod(Enum):
 class ImageRetrievalSystem:
 
     def __init__(self):
-        self.dataloader = DataLoader()
+        self.bbdd_loader = DataLoader()
+        self.qsd1_loader = DataLoader()
         self.bbdd_descriptors: Dict[int, np.ndarray] = {}
         self.qsd1_descriptors: Dict[int, np.ndarray] = {}
         self.ground_truth: List[List[int]] = []
 
-    def load_datasets(self) -> None:
-        print("Loading BBDD dataset...")
-        self.dataloader.load_dataset(DatasetType.BBDD)
-        bbdd_info = self.dataloader.get_dataset_info()
-        print(f"Loaded {bbdd_info['num_images']} BBDD images")
-
-        print("Loading QSD1 dataset...")
-        self.dataloader.load_dataset(DatasetType.QSD1_W1)
-        qsd1_info = self.dataloader.get_dataset_info()
-        print(f"Loaded {qsd1_info['num_images']} QSD1 images")
-
     def compute_bbdd_descriptors(self, method: DescriptorMethod) -> None:
         print(f"Computing BBDD descriptors using {method.value}...")
-        self.dataloader.load_dataset(DatasetType.BBDD)
+        self.bbdd_loader.load_dataset(DatasetType.BBDD)
 
-        for image_id, image, info, relationship in self.dataloader.iterate_images():
+        for image_id, image, info, relationship in self.bbdd_loader.iterate_images():
             if method == DescriptorMethod.LAB:
                 descriptor = histogram_lab(image)
             elif method == DescriptorMethod.HSV:
@@ -53,10 +43,10 @@ class ImageRetrievalSystem:
 
     def compute_qsd1_descriptors(self, method: DescriptorMethod) -> None:
         print(f"Computing QSD1 descriptors using {method.value}...")
-        self.dataloader.load_dataset(DatasetType.QSD1_W1)
+        self.qsd1_loader.load_dataset(DatasetType.QSD1_W1)
 
         self.ground_truth = []
-        for image_id, image, info, relationship in self.dataloader.iterate_images():
+        for image_id, image, info, relationship in self.qsd1_loader.iterate_images():
             if method == DescriptorMethod.LAB:
                 descriptor = histogram_lab(image)
             elif method == DescriptorMethod.HSV:
