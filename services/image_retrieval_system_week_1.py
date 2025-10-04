@@ -25,37 +25,34 @@ class ImageRetrievalSystem:
         self.qsd1_descriptors: Dict[int, np.ndarray] = {}
         self.ground_truth: List[List[int]] = []
 
-    def compute_bbdd_descriptors(self, method: DescriptorMethod) -> None:
-        print(f"Computing BBDD descriptors using {method.value}...")
-        self.bbdd_loader.load_dataset(DatasetType.BBDD)
+    def compute_descriptors(self, dataset_type: DatasetType, method: DescriptorMethod) -> None:
+        print(f"Computing {method.value} descriptors for {dataset_type.value} dataset...")
+        if dataset_type == DatasetType.BBDD:
+            loader = self.bbdd_loader
+            target_dict = self.bbdd_descriptors
+        elif dataset_type == DatasetType.QSD1_W1:
+            loader = self.qsd1_loader
+            target_dict = self.qsd1_descriptors
+        else:
+            raise ValueError(f"Unknown dataset type: {dataset_type}")
 
-        for image_id, image, info, relationship in self.bbdd_loader.iterate_images():
+        target_dict.clear()
+
+        for image_id, image, _, _ in loader.iterate_images():
             if method == DescriptorMethod.LAB:
-                descriptor = histogram_lab(image)
+                desc = histogram_lab(image)
             elif method == DescriptorMethod.HSV:
-                descriptor = histogram_hsv(image)
+                desc = histogram_hsv(image)
             else:
                 raise ValueError(f"Unknown method: {method}")
 
-            self.bbdd_descriptors[image_id] = descriptor
+            target_dict[image_id] = desc
+        print(f"Computed descriptors for {len(target_dict)} images in {dataset_type.value} dataset")
 
-        print(f"Computed {len(self.bbdd_descriptors)} BBDD descriptors")
-
-    def compute_qsd1_descriptors(self, method: DescriptorMethod) -> None:
-        print(f"Computing QSD1 descriptors using {method.value}...")
-        self.qsd1_loader.load_dataset(DatasetType.QSD1_W1)
-
+    def load_ground_truth(self) -> None:
+        print("Loading ground truth relationships for QSD1 dataset...")
         self.ground_truth = []
-        for image_id, image, info, relationship in self.qsd1_loader.iterate_images():
-            if method == DescriptorMethod.LAB:
-                descriptor = histogram_lab(image)
-            elif method == DescriptorMethod.HSV:
-                descriptor = histogram_hsv(image)
-            else:
-                raise ValueError(f"Unknown method: {method}")
-
-            self.qsd1_descriptors[image_id] = descriptor
-
+        for _, _, _, relationship in self.qsd1_loader.iterate_images():
             if relationship is not None:
                 if isinstance(relationship, list):
                     self.ground_truth.append(relationship)
@@ -63,8 +60,7 @@ class ImageRetrievalSystem:
                     self.ground_truth.append([relationship])
             else:
                 self.ground_truth.append([])
-
-        print(f"Computed {len(self.qsd1_descriptors)} QSD1 descriptors")
+        print(f"Loaded ground truth for {len(self.ground_truth)} QSD1 images")
 
     def retrieve_similar_images(self, k: int = 5) -> List[List[int]]:
         predictions = []
@@ -121,11 +117,16 @@ class ImageRetrievalSystem:
         print(f"EVALUATION: {method.value.upper()} METHOD")
         print(f"{'='*60}")
 
-        self.bbdd_descriptors.clear()
-        self.qsd1_descriptors.clear()
+        # Load datasets
+        self.bbdd_loader.load_dataset(DatasetType.BBDD)
+        self.qsd1_loader.load_dataset(DatasetType.QSD1_W1)
 
-        self.compute_bbdd_descriptors(method)
-        self.compute_qsd1_descriptors(method)
+        # Load ground truth
+        self.load_ground_truth()
+
+        # Compute descriptors
+        self.compute_descriptors(DatasetType.BBDD, method)
+        self.compute_descriptors(DatasetType.QSD1_W1, method)
 
         # Generate predictions with K=10 for competition format
         predictions_k10 = self.retrieve_similar_images(k=10)
