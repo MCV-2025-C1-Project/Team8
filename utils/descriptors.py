@@ -120,11 +120,23 @@ def histogram_hsv(img: np.ndarray, bins: int = 256) -> np.ndarray:
 
 
 class DescriptorMethod(Enum):
-    GRAYSCALE = ("grayscale", histogram_grayscale)
-    RGB = ("rgb", histogram_rgb)
-    LAB = ("lab", histogram_lab)
-    HSV = ("hsv", histogram_hsv)
-
-    def __init__(self, type, descriptor):
-        self.type = type
-        self.descriptor = descriptor
+    GRAYSCALE = "grayscale"
+    RGB = "rgb"
+    LAB = "lab"
+    HSV = "hsv"
+    
+    def compute(self, img: np.ndarray, bins: int = 256) -> np.ndarray:
+        if self == DescriptorMethod.GRAYSCALE:
+            return histogram_grayscale(img, bins)
+        elif self == DescriptorMethod.RGB:
+            return histogram_rgb(img, bins)
+        elif self == DescriptorMethod.LAB:
+            return histogram_lab(img, bins)
+        elif self == DescriptorMethod.HSV:
+            return histogram_hsv(img, bins)
+        else:
+            raise ValueError(f"Unknown descriptor method: {self}")
+    
+    @property
+    def name(self) -> str:
+        return self.value.upper()

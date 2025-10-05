@@ -4,10 +4,17 @@ import pickle
 import json
 from PIL import Image
 from typing import List, Tuple, Dict, Any
+from enum import Enum
 from dataloader.dataloader import DataLoader, DatasetType
-from utils.descriptors import DescriptorMethod, histogram_lab, histogram_hsv
-from utils.measures import MeasureType, SimilarityMeasure, hist_intersect
+from utils.descriptors import DescriptorMethod
+from utils.measures import SimilarityMeasure
 from utils.metrics import mapk
+
+
+class DatasetRole(Enum):
+    """Enum for dataset roles in the retrieval system."""
+    INDEX = "index"
+    QUERY = "query"
 
 
 class ImageRetrievalSystem:
@@ -19,28 +26,26 @@ class ImageRetrievalSystem:
         self.index_descriptors: Dict[int, np.ndarray] = {}
         self.ground_truth: List[List[int]] = []
 
-    def compute_descriptors(self, type: str, method: DescriptorMethod) -> None:
-        print(f"Computing {method.type} descriptors for {type} dataset...")
-        if type == "query":
+    def compute_descriptors(self, role: DatasetRole, method: DescriptorMethod) -> None:
+        if role == DatasetRole.QUERY:
             loader = self.query_dataset
             target_dict = self.query_descriptors
-        elif type == "index":
+        elif role == DatasetRole.INDEX:
             loader = self.index_dataset
             target_dict = self.index_descriptors
         else:
-            raise ValueError(f"Unknown dataset type: {type}")
+            raise ValueError(f"Unknown dataset role: {role}")
 
         target_dict.clear()
         for image_id, image, _, _ in loader.iterate_images():
-            desc = method.descriptor(image)
+            desc = method.compute(image)
             target_dict[image_id] = desc
 
         print(f"Computed descriptors for {len(target_dict)} images in {loader.dataset_type.name} dataset")
 
     def load_ground_truth(self) -> None:
-        print("Loading ground truth relationships for index dataset...")
         self.ground_truth = []
-        for _, _, _, relationship in self.index_dataset.iterate_images():
+        for _, _, _, relationship in self.query_dataset.iterate_images():
             if relationship is not None:
                 if isinstance(relationship, list):
                     self.ground_truth.append(relationship)
@@ -48,25 +53,28 @@ class ImageRetrievalSystem:
                     self.ground_truth.append([relationship])
             else:
                 self.ground_truth.append([])
-        print(f"Loaded ground truth for {len(self.ground_truth)} images")
+        print(f"Loaded ground truth for dataset {self.query_dataset.dataset_type.name}")
 
     def retrieve_similar_images(self, measure: SimilarityMeasure, k: int = 5) -> List[List[int]]:
         predictions = []
 
-        for id in sorted(self.index_descriptors.keys()):
-            index_desc = self.index_descriptors[id]
+        # For each query image, find the most similar index images
+        for query_id in sorted(self.query_descriptors.keys()):
+            query_desc = self.query_descriptors[query_id]
             similarities = []
 
-            for query_id, query_desc in self.query_descriptors.items():
-                similarity = measure.func(index_desc, query_desc)
-                if measure.measure_type == MeasureType.SIMILARITY:
-                    similarities.append((-similarity, query_id))  # Negative for sorting (highest similarity first)
-                else: # measure.measure_type == MeasureType.DISTANCE:
-                    similarities.append((similarity, query_id))   # Lower distance is better
+            for index_id, index_desc in self.index_descriptors.items():
+                similarity = measure.compute(query_desc, index_desc)
+                if measure.is_similarity:
+                    similarities.append((-similarity, index_id))  # Negative for sorting (highest similarity first)
+                elif measure.is_distance:
+                    similarities.append((similarity, index_id))   # Lower distance is better
     
             similarities.sort(key=lambda x: x[0])
-            top_k_ids = [bbdd_id for _, bbdd_id in similarities[:k]]
+            top_k_ids = [index_id for _, index_id in similarities[:k]]
             predictions.append(top_k_ids)
+            
+        print(f"Retrieved top-{k} similar images for {len(predictions)} query images")
 
         return predictions
 
@@ -80,8 +88,16 @@ class ImageRetrievalSystem:
             method_name = "method2"
         else:
             raise ValueError(f"Unknown method: {method}")
+        
+        # Determine dataset name based on query dataset
+        if self.query_dataset.dataset_type == DatasetType.QSD1_W1:
+            dataset_name = "QSD1_W1"
+        elif self.query_dataset.dataset_type == DatasetType.QST1_W1:
+            dataset_name = "QST1_W1"
+        else:
+            raise ValueError(f"Unknown query dataset: {self.query_dataset.dataset_type}")
             
-        results_dir = os.path.join("results", "week1", "QST1", method_name)
+        results_dir = os.path.join("results", "week1", dataset_name, method_name)
         os.makedirs(results_dir, exist_ok=True)
         
         # Save predictions as .pkl file (list of lists with integer image IDs)
@@ -89,7 +105,7 @@ class ImageRetrievalSystem:
         with open(pkl_filepath, 'wb') as f:
             pickle.dump(predictions, f)
         
-        # Save metrics as JSON file (human-readable)
+        # Save metrics as JSON file (human-readable) only if metrics are provided
         if metrics:
             json_filepath = os.path.join(results_dir, "metrics.json")
             with open(json_filepath, 'w') as f:
@@ -102,21 +118,18 @@ class ImageRetrievalSystem:
 
     def run(self, method: DescriptorMethod, measure: SimilarityMeasure, index_dataset: DatasetType, query_dataset: DatasetType, save_results: bool = True) -> Dict[str, float]:
         """Run retrieval with given descriptor and measure."""
-        print(f"\n{'='*60}")
-        print(f"DESCRIPTOR METHOD: {method.type.upper()} SIMILARITY MEASURE: {measure.label.upper()}")
-        print(f"{'='*60}")
 
         # Load datasets
         self.index_dataset.load_dataset(index_dataset)
         self.query_dataset.load_dataset(query_dataset)
 
         # Load ground truth
-        if self.index_dataset.has_ground_truth():
+        if self.query_dataset.has_ground_truth():
             self.load_ground_truth()
 
         # Compute descriptors
-        self.compute_descriptors("query", method)
-        self.compute_descriptors("index", method)
+        self.compute_descriptors(DatasetRole.QUERY, method)
+        self.compute_descriptors(DatasetRole.INDEX, method)
 
         # Generate predictions with K=10 for competition format
         predictions_k10 = self.retrieve_similar_images(measure, k=10)
@@ -125,18 +138,20 @@ class ImageRetrievalSystem:
         predictions_k5 = [pred[:5] for pred in predictions_k10]
 
         # Evaluate
-        if self.index_dataset.has_ground_truth():
+        if self.query_dataset.has_ground_truth():
             map_at_1 = self.evaluate_map_at_k(predictions_k5, k=1)
             map_at_5 = self.evaluate_map_at_k(predictions_k5, k=5)
 
-            results = {"mAP@1": map_at_1, "mAP@5": map_at_5}
-
-            print(f"mAP@1: {map_at_1:.4f}")
-            print(f"mAP@5: {map_at_5:.4f}")
+            metrics = {"mAP@1": map_at_1, "mAP@5": map_at_5}
         
             if save_results:
-                self.save_results(predictions_k10, method, results)
+                self.save_results(predictions_k10, method, metrics)
 
-            return results
+            return metrics
+        else:
+            print("No ground truth available for evaluation")
+            if save_results:
+                self.save_results(predictions_k10, method, None)
+            return {}
 
         

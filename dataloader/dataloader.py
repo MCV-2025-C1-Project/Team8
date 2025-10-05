@@ -25,8 +25,10 @@ class DataLoader:
     def _reverse_dict(self, d: Dict[Any, Any]) -> Dict[Any, Any]:
         return {value: key for key, value in d.items()}
     
-    def has_ground_truth(self):
-        return True if self.dataset_type.name in ["BBDD", "qsd1_w1"] else False
+    def has_ground_truth(self) -> bool:
+        if self.dataset_type is None:
+            return False
+        return self.dataset_type in [DatasetType.BBDD, DatasetType.QSD1_W1]
 
     def load_dataset(self, dataset: DatasetType) -> None:
         """Load dataset by DatasetType enum."""
