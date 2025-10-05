@@ -9,6 +9,7 @@ from typing import Dict, Any, Tuple, Iterator, Optional
 class DatasetType(Enum):
     BBDD = "BBDD"
     QSD1_W1 = "qsd1_w1"
+    QST1_W1 = "qst1_w1"
 
 
 class DataLoader:
@@ -23,6 +24,9 @@ class DataLoader:
 
     def _reverse_dict(self, d: Dict[Any, Any]) -> Dict[Any, Any]:
         return {value: key for key, value in d.items()}
+    
+    def has_ground_truth(self):
+        return True if self.dataset_type.name in ["BBDD", "qsd1_w1"] else False
 
     def load_dataset(self, dataset: DatasetType) -> None:
         """Load dataset by DatasetType enum."""
@@ -32,6 +36,8 @@ class DataLoader:
             self.load_BBDD()
         elif dataset == DatasetType.QSD1_W1:
             self.load_qsd1_w1()
+        elif dataset == DatasetType.QST1_W1:
+            self.load_qst1_w1()
 
         self.dataset_type = dataset
 
@@ -163,6 +169,43 @@ class DataLoader:
             raise Exception(f"Error reading qsd1_w1 directory: {e}")
 
         print(f"Successfully loaded {len(self.data)} images from qsd1_w1 dataset")
+
+    def load_qst1_w1(self) -> None:
+        """Load qst1_w1 dataset: JPG images."""
+        dataset_path = os.path.join(self.data_path, "qst1_w1")
+
+        if not os.path.exists(dataset_path):
+            raise FileNotFoundError(f"qst1_w1 dataset path not found: {dataset_path}")
+
+        try:
+            files = [
+                f
+                for f in os.listdir(dataset_path)
+                if f.endswith(".jpg") and os.path.isfile(os.path.join(dataset_path, f))
+            ]
+
+            for filename in files:
+                try:
+                    name_without_ext = filename.split(".")[0]
+                    image_id = int(name_without_ext)
+
+                    jpg_filename = os.path.join(dataset_path, filename)
+                    image = np.array(Image.open(jpg_filename))
+
+                    self.data[image_id] = {
+                        "image": image,
+                        "info": f"Query image {name_without_ext}",
+                        "relationship": None,
+                    }
+
+                except Exception as e:
+                    print(f"Warning: Error processing {filename}: {e}")
+                    continue
+
+        except Exception as e:
+            raise Exception(f"Error reading qst1_w1 directory: {e}")
+
+        print(f"Successfully loaded {len(self.data)} images from qst1_w1 dataset")
 
     def clear_dataset(self) -> None:
         self.data = {}
