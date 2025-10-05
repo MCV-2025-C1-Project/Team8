@@ -3,6 +3,7 @@
 Main entry point for the Image Retrieval System
 """
 
+from dataloader.dataloader import DatasetType
 from services.image_retrieval_system_week_1 import ImageRetrievalSystem
 from utils.descriptors import DescriptorMethod
 from utils.measures import SimilarityMeasure
@@ -10,7 +11,6 @@ from utils.measures import SimilarityMeasure
 def main():
     print("IMAGE RETRIEVAL SYSTEM - WEEK 1")
     print("=" * 60)
-    print("Using QSD1 & BBDD datasets")
     print("Methods: CieLab and HSV Histograms")
     print("=" * 60)
 
@@ -19,16 +19,20 @@ def main():
     print("\nRunning evaluations...")
     
     # Method 1: CieLab Histogram  
-    lab_results = retrieval_system.run_evaluation(
-        DescriptorMethod.LAB,
-        SimilarityMeasure.HIST_INTERSECT,
+    lab_results = retrieval_system.run(
+        method=DescriptorMethod.LAB,
+        measure=SimilarityMeasure.HIST_INTERSECT,
+        index_dataset=DatasetType.BBDD,
+        query_dataset=DatasetType.QST1_W1,
         save_results=True
     )
     
     # Method 2: HSV Histogram
-    hsv_results = retrieval_system.run_evaluation(
-        DescriptorMethod.HSV,
-        SimilarityMeasure.HIST_INTERSECT,
+    hsv_results = retrieval_system.run(
+        method=DescriptorMethod.HSV,
+        measure=SimilarityMeasure.HIST_INTERSECT,
+        index_dataset=DatasetType.BBDD,
+        query_dataset=DatasetType.QST1_W1,
         save_results=True
     )
 

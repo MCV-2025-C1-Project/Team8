@@ -13,35 +13,34 @@ from utils.metrics import mapk
 class ImageRetrievalSystem:
 
     def __init__(self):
-        self.bbdd_loader = DataLoader()
-        self.qsd1_loader = DataLoader()
-        self.bbdd_descriptors: Dict[int, np.ndarray] = {}
-        self.qsd1_descriptors: Dict[int, np.ndarray] = {}
+        self.query_dataset = DataLoader()
+        self.index_dataset = DataLoader()
+        self.query_descriptors: Dict[int, np.ndarray] = {}
+        self.index_descriptors: Dict[int, np.ndarray] = {}
         self.ground_truth: List[List[int]] = []
 
-    def compute_descriptors(self, dataset_type: DatasetType, method: DescriptorMethod) -> None:
-        print(f"Computing {method.type} descriptors for {dataset_type.value} dataset...")
-        if dataset_type == DatasetType.BBDD:
-            loader = self.bbdd_loader
-            target_dict = self.bbdd_descriptors
-        elif dataset_type == DatasetType.QSD1_W1:
-            loader = self.qsd1_loader
-            target_dict = self.qsd1_descriptors
+    def compute_descriptors(self, type: str, method: DescriptorMethod) -> None:
+        print(f"Computing {method.type} descriptors for {type} dataset...")
+        if type == "query":
+            loader = self.query_dataset
+            target_dict = self.query_descriptors
+        elif type == "index":
+            loader = self.index_dataset
+            target_dict = self.index_descriptors
         else:
-            raise ValueError(f"Unknown dataset type: {dataset_type}")
+            raise ValueError(f"Unknown dataset type: {type}")
 
         target_dict.clear()
-
         for image_id, image, _, _ in loader.iterate_images():
             desc = method.descriptor(image)
             target_dict[image_id] = desc
 
-        print(f"Computed descriptors for {len(target_dict)} images in {dataset_type.value} dataset")
+        print(f"Computed descriptors for {len(target_dict)} images in {loader.dataset_type.name} dataset")
 
     def load_ground_truth(self) -> None:
-        print("Loading ground truth relationships for QSD1 dataset...")
+        print("Loading ground truth relationships for index dataset...")
         self.ground_truth = []
-        for _, _, _, relationship in self.qsd1_loader.iterate_images():
+        for _, _, _, relationship in self.index_dataset.iterate_images():
             if relationship is not None:
                 if isinstance(relationship, list):
                     self.ground_truth.append(relationship)
@@ -49,21 +48,21 @@ class ImageRetrievalSystem:
                     self.ground_truth.append([relationship])
             else:
                 self.ground_truth.append([])
-        print(f"Loaded ground truth for {len(self.ground_truth)} QSD1 images")
+        print(f"Loaded ground truth for {len(self.ground_truth)} images")
 
     def retrieve_similar_images(self, measure: SimilarityMeasure, k: int = 5) -> List[List[int]]:
         predictions = []
 
-        for qsd1_id in sorted(self.qsd1_descriptors.keys()):
-            qsd1_desc = self.qsd1_descriptors[qsd1_id]
+        for id in sorted(self.index_descriptors.keys()):
+            index_desc = self.index_descriptors[id]
             similarities = []
 
-            for bbdd_id, bbdd_desc in self.bbdd_descriptors.items():
-                similarity = measure.func(qsd1_desc, bbdd_desc)
+            for query_id, query_desc in self.query_descriptors.items():
+                similarity = measure.func(index_desc, query_desc)
                 if measure.measure_type == MeasureType.SIMILARITY:
-                    similarities.append((-similarity, bbdd_id))  # Negative for sorting (highest similarity first)
+                    similarities.append((-similarity, query_id))  # Negative for sorting (highest similarity first)
                 else: # measure.measure_type == MeasureType.DISTANCE:
-                    similarities.append((similarity, bbdd_id))   # Lower distance is better
+                    similarities.append((similarity, query_id))   # Lower distance is better
     
             similarities.sort(key=lambda x: x[0])
             top_k_ids = [bbdd_id for _, bbdd_id in similarities[:k]]
@@ -101,22 +100,23 @@ class ImageRetrievalSystem:
         print(f"Format: List of {len(predictions)} queries, each with K=10 best results")
         return pkl_filepath
 
-    def run_evaluation(self, method: DescriptorMethod, measure: SimilarityMeasure, save_results: bool = True) -> Dict[str, float]:
-        """Run complete evaluation for a method."""
+    def run(self, method: DescriptorMethod, measure: SimilarityMeasure, index_dataset: DatasetType, query_dataset: DatasetType, save_results: bool = True) -> Dict[str, float]:
+        """Run retrieval with given descriptor and measure."""
         print(f"\n{'='*60}")
-        print(f"EVALUATION: {method.type.upper()} METHOD")
+        print(f"DESCRIPTOR METHOD: {method.type.upper()} SIMILARITY MEASURE: {measure.label.upper()}")
         print(f"{'='*60}")
 
         # Load datasets
-        self.bbdd_loader.load_dataset(DatasetType.BBDD)
-        self.qsd1_loader.load_dataset(DatasetType.QSD1_W1)
+        self.index_dataset.load_dataset(index_dataset)
+        self.query_dataset.load_dataset(query_dataset)
 
         # Load ground truth
-        self.load_ground_truth()
+        if self.index_dataset.has_ground_truth():
+            self.load_ground_truth()
 
         # Compute descriptors
-        self.compute_descriptors(DatasetType.BBDD, method)
-        self.compute_descriptors(DatasetType.QSD1_W1, method)
+        self.compute_descriptors("query", method)
+        self.compute_descriptors("index", method)
 
         # Generate predictions with K=10 for competition format
         predictions_k10 = self.retrieve_similar_images(measure, k=10)
@@ -124,16 +124,19 @@ class ImageRetrievalSystem:
         # Also compute K=5 for evaluation metrics
         predictions_k5 = [pred[:5] for pred in predictions_k10]
 
-        map_at_1 = self.evaluate_map_at_k(predictions_k5, k=1)
-        map_at_5 = self.evaluate_map_at_k(predictions_k5, k=5)
+        # Evaluate
+        if self.index_dataset.has_ground_truth():
+            map_at_1 = self.evaluate_map_at_k(predictions_k5, k=1)
+            map_at_5 = self.evaluate_map_at_k(predictions_k5, k=5)
 
-        results = {"mAP@1": map_at_1, "mAP@5": map_at_5}
+            results = {"mAP@1": map_at_1, "mAP@5": map_at_5}
 
-        print(f"mAP@1: {map_at_1:.4f}")
-        print(f"mAP@5: {map_at_5:.4f}")
+            print(f"mAP@1: {map_at_1:.4f}")
+            print(f"mAP@5: {map_at_5:.4f}")
         
-        if save_results:
-            self.save_results(predictions_k10, method, results)
+            if save_results:
+                self.save_results(predictions_k10, method, results)
 
-        return results
+            return results
 
+        
