@@ -73,6 +73,13 @@ results/week1/QST1_W1/
 
 Core packages required:
 - `numpy==1.24.4` - Numerical computing
-- `opencv-python==4.8.1.78` - HSV color space conversion
-- `pillow==11.3.0` - Image processing
+- `opencv-python==4.8.1.78` - Colour space conversion
+- `pillow==11.3.0` - Image loading
 
+## Members
+
+> Miguel Moral Hernández
+
+> Miquel Sala Francí
+
+> Roger Vendrell Colet
