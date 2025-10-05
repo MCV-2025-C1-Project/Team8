@@ -27,7 +27,15 @@ class ImageRetrievalSystem:
         self.query_descriptors: Dict[int, np.ndarray] = {}
         self.ground_truth: List[List[int]] = []
 
-    def compute_descriptors(self, role: DatasetRole, method: DescriptorMethod, preprocessing: PreprocessingMethod = PreprocessingMethod.NONE, **preprocessing_kwargs) -> None:
+    def compute_descriptors(
+        self, 
+        role: DatasetRole, 
+        method: DescriptorMethod, 
+        bins: int = 256, 
+        preprocessing: PreprocessingMethod = PreprocessingMethod.NONE
+        , **preprocessing_kwargs
+    ) -> None:
+        
         if role == DatasetRole.INDEX:
             loader = self.index_dataset
             target_dict = self.index_descriptors
@@ -39,7 +47,7 @@ class ImageRetrievalSystem:
 
         target_dict.clear()
         for image_id, image, _, _ in loader.iterate_images():
-            desc = method.compute(image, preprocessing=preprocessing, **preprocessing_kwargs)
+            desc = method.compute(image, bins=bins, preprocessing=preprocessing, **preprocessing_kwargs)
             target_dict[image_id] = desc
 
         print(f"Computed descriptors for {len(target_dict)} images in {loader.dataset_type.name} dataset")
@@ -117,7 +125,18 @@ class ImageRetrievalSystem:
         print(f"Format: List of {len(predictions)} queries, each with K=10 best results")
         return pkl_filepath
 
-    def run(self, method: DescriptorMethod, measure: SimilarityMeasure, index_dataset: DatasetType, query_dataset: DatasetType, save_results: bool = True, preprocessing: PreprocessingMethod = PreprocessingMethod.NONE, **preprocessing_kwargs) -> Dict[str, float]:
+    def run(
+        self, 
+        method: DescriptorMethod, 
+        measure: SimilarityMeasure, 
+        index_dataset: DatasetType, 
+        query_dataset: DatasetType, 
+        save_results: bool = True, 
+        bins: int = 256, 
+        preprocessing: PreprocessingMethod = PreprocessingMethod.NONE, 
+        **preprocessing_kwargs
+    ) -> Dict[str, float]:
+        
         """Run retrieval with given descriptor and measure."""
 
         # Load datasets
@@ -129,8 +148,8 @@ class ImageRetrievalSystem:
             self.load_ground_truth()
 
         # Compute descriptors
-        self.compute_descriptors(DatasetRole.QUERY, method, preprocessing, **preprocessing_kwargs)
-        self.compute_descriptors(DatasetRole.INDEX, method, preprocessing, **preprocessing_kwargs)
+        self.compute_descriptors(DatasetRole.QUERY, method, bins, preprocessing, **preprocessing_kwargs)
+        self.compute_descriptors(DatasetRole.INDEX, method, bins, preprocessing, **preprocessing_kwargs)
 
         # Generate predictions with K=10 for competition format
         predictions_k10 = self.retrieve_similar_images(measure, k=10)

@@ -24,8 +24,10 @@ def histogram_grayscale(img: np.ndarray, bins: int = 256) -> np.ndarray:
     elif img.ndim != 2:
         raise ValueError("Image must be 2D (grayscale) or 3D (RGB)")
 
+    # Fixed-length histogram using explicit bin edges over [0, 256)
     pixel_intensities = img.flatten()
-    histogram = np.bincount(pixel_intensities, minlength=bins).astype(np.float32)
+    histogram, _ = np.histogram(pixel_intensities, bins=bins, range=(0, 256))
+    histogram = histogram.astype(np.float32)
     return histogram / np.sum(histogram)
 
 
@@ -47,10 +49,13 @@ def histogram_rgb(img: np.ndarray, bins: int = 256) -> np.ndarray:
     elif img.ndim != 3 or img.shape[2] != 3:
         raise ValueError("Image must be 2D (grayscale) or 3D (RGB)")
 
-    # Compute histogram for each channel separately (without normalization)
-    a = np.bincount(img[:, :, 0].flatten(), minlength=bins).astype(np.float32)
-    b = np.bincount(img[:, :, 1].flatten(), minlength=bins).astype(np.float32)
-    c = np.bincount(img[:, :, 2].flatten(), minlength=bins).astype(np.float32)
+    # Compute histogram for each channel separately with fixed bins
+    a, _ = np.histogram(img[:, :, 0].flatten(), bins=bins, range=(0, 256))
+    b, _ = np.histogram(img[:, :, 1].flatten(), bins=bins, range=(0, 256))
+    c, _ = np.histogram(img[:, :, 2].flatten(), bins=bins, range=(0, 256))
+    a = a.astype(np.float32)
+    b = b.astype(np.float32)
+    c = c.astype(np.float32)
 
     # Concatenate and normalize the combined histogram
     histogram = np.concatenate([a, b, c], axis=0)
@@ -78,10 +83,13 @@ def histogram_lab(img: np.ndarray, bins: int = 256) -> np.ndarray:
     # Convert RGB to L*a*b*
     lab_img = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
     
-    # Compute histogram for each L*a*b* channel separately
-    l_hist = np.bincount(lab_img[:, :, 0].flatten(), minlength=bins).astype(np.float32)
-    a_hist = np.bincount(lab_img[:, :, 1].flatten(), minlength=bins).astype(np.float32)
-    b_hist = np.bincount(lab_img[:, :, 2].flatten(), minlength=bins).astype(np.float32)
+    # Compute histogram for each L*a*b* channel separately with fixed bins
+    l_hist, _ = np.histogram(lab_img[:, :, 0].flatten(), bins=bins, range=(0, 256))
+    a_hist, _ = np.histogram(lab_img[:, :, 1].flatten(), bins=bins, range=(0, 256))
+    b_hist, _ = np.histogram(lab_img[:, :, 2].flatten(), bins=bins, range=(0, 256))
+    l_hist = l_hist.astype(np.float32)
+    a_hist = a_hist.astype(np.float32)
+    b_hist = b_hist.astype(np.float32)
 
     # Concatenate and normalize the combined histogram
     histogram = np.concatenate([l_hist, a_hist, b_hist], axis=0)
@@ -109,10 +117,14 @@ def histogram_hsv(img: np.ndarray, bins: int = 256) -> np.ndarray:
     # Convert RGB to HSV
     hsv_img = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
     
-    # Compute histogram for each HSV channel separately
-    a = np.bincount(hsv_img[:, :, 0].flatten(), minlength=bins).astype(np.float32)
-    b = np.bincount(hsv_img[:, :, 1].flatten(), minlength=bins).astype(np.float32)
-    c = np.bincount(hsv_img[:, :, 2].flatten(), minlength=bins).astype(np.float32)
+    # Compute histogram for each HSV channel separately with fixed bins
+    # OpenCV HSV ranges: H in [0,180], S and V in [0,255]
+    a, _ = np.histogram(hsv_img[:, :, 0].flatten(), bins=bins, range=(0, 180))
+    b, _ = np.histogram(hsv_img[:, :, 1].flatten(), bins=bins, range=(0, 256))
+    c, _ = np.histogram(hsv_img[:, :, 2].flatten(), bins=bins, range=(0, 256))
+    a = a.astype(np.float32)
+    b = b.astype(np.float32)
+    c = c.astype(np.float32)
 
     # Concatenate and normalize the combined histogram
     histogram = np.concatenate([a, b, c], axis=0)
@@ -126,7 +138,14 @@ class DescriptorMethod(Enum):
     LAB = "lab"
     HSV = "hsv"
     
-    def compute(self, img: np.ndarray, bins: int = 256, preprocessing: PreprocessingMethod = PreprocessingMethod.NONE, **preprocessing_kwargs) -> np.ndarray:
+    def compute(
+        self, 
+        img: np.ndarray, 
+        bins: int = 256, 
+        preprocessing: PreprocessingMethod = PreprocessingMethod.NONE, 
+        **preprocessing_kwargs
+    ) -> np.ndarray:
+        
         """Compute the descriptor for the given image with optional preprocessing."""
         # Apply preprocessing
         if preprocessing != PreprocessingMethod.NONE:

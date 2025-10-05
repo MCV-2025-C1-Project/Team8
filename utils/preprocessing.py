@@ -3,6 +3,18 @@ import cv2
 from typing import Tuple
 from enum import Enum
 
+def apply_histogram_equalization(img: np.ndarray) -> np.ndarray:
+    """Apply histogram equalization to improve contrast."""
+    if img.ndim == 3:
+        # For color images, apply equalization to each channel
+        equalized = np.zeros_like(img)
+        for i in range(3):
+            equalized[:, :, i] = cv2.equalizeHist(img[:, :, i])
+        return equalized
+    else:
+        # For grayscale images
+        return cv2.equalizeHist(img)
+
 def apply_gaussian_blur(img: np.ndarray, kernel_size: Tuple[int, int] = (3, 3), sigma: float = 0) -> np.ndarray:
     """Apply Gaussian blur to reduce noise."""
     return cv2.GaussianBlur(img, kernel_size, sigma)
@@ -23,11 +35,13 @@ def apply_gamma_correction(img: np.ndarray, gamma: float = 0.8) -> np.ndarray:
     return cv2.LUT(img, table)
 
 
+
 class PreprocessingMethod(Enum):
     """Simple preprocessing methods for image retrieval."""
     
     NONE = "none"
     GAMMA = "gamma"
+    HIST_EQ = "hist_eq"
     GAUSSIAN = "gaussian"
     MEDIAN = "median"
     
@@ -35,6 +49,8 @@ class PreprocessingMethod(Enum):
         """Apply the preprocessing method to the image."""
         if self == PreprocessingMethod.NONE:
             return img
+        elif self == PreprocessingMethod.HIST_EQ:
+            return apply_histogram_equalization(img)
         elif self == PreprocessingMethod.GAMMA:
             gamma = kwargs.get('gamma', 0.8)
             return apply_gamma_correction(img, gamma)
