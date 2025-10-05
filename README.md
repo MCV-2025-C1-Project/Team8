@@ -30,14 +30,14 @@ This will execute a **two-phase evaluation**:
 
 #### **Phase 1: Validation (QSD1_W1)**
 - Load BBDD (index) and QSD1_W1 (query) datasets with ground truth
-- Run **Method 1**: CieLab Histogram + Histogram Intersection
-- Run **Method 2**: HSV Histogram + Histogram Intersection  
+- Run **Method 1**: CieLab Histogram + Histogram Intersection + Gamma Correction
+- Run **Method 2**: HSV Histogram + Histogram Intersection + Histogram Equalization
 - Evaluate both methods using mAP@1 and mAP@5 metrics
 - Save validation results to `results/week1/QSD1_W1/` (with metrics.json)
 
 #### **Phase 2: Test Predictions (QST1_W1)**
 - Load BBDD (index) and QST1_W1 (query) datasets (no ground truth)
-- Generate predictions for both methods
+- Generate predictions for both methods (Method 1 & 2, same as in validation)
 - Save test results to `results/week1/QST1_W1/` (only result.pkl files)
 - No evaluation performed (no ground truth available)
 
