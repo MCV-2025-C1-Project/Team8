@@ -3,6 +3,7 @@ import numpy as np
 import cv2
 from typing import Tuple
 from PIL import Image
+from utils.preprocessing import PreprocessingMethod
 
 
 def histogram_grayscale(img: np.ndarray, bins: int = 256) -> np.ndarray:
@@ -125,7 +126,12 @@ class DescriptorMethod(Enum):
     LAB = "lab"
     HSV = "hsv"
     
-    def compute(self, img: np.ndarray, bins: int = 256) -> np.ndarray:
+    def compute(self, img: np.ndarray, bins: int = 256, preprocessing: PreprocessingMethod = PreprocessingMethod.NONE, **preprocessing_kwargs) -> np.ndarray:
+        """Compute the descriptor for the given image with optional preprocessing."""
+        # Apply preprocessing
+        if preprocessing != PreprocessingMethod.NONE:
+            img = preprocessing.apply(img, **preprocessing_kwargs)
+        
         if self == DescriptorMethod.GRAYSCALE:
             return histogram_grayscale(img, bins)
         elif self == DescriptorMethod.RGB:
