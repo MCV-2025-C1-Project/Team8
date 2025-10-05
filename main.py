@@ -29,7 +29,7 @@ def main():
         query_dataset=DatasetType.QSD1_W1,
         save_results=True,
         bins=32,
-        preprocessing=PreprocessingMethod.HIST_EQ,
+        preprocessing=PreprocessingMethod.GAMMA,
     )
 
     # HSV 
@@ -61,7 +61,7 @@ def main():
         query_dataset=DatasetType.QST1_W1,
         save_results=True,
         bins=32,
-        preprocessing=PreprocessingMethod.HIST_EQ,
+        preprocessing=PreprocessingMethod.GAMMA,
     )
 
     # HSV on QST1_W1 
