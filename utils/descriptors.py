@@ -1,3 +1,4 @@
+from enum import Enum
 import numpy as np
 import cv2
 from typing import Tuple
@@ -115,3 +116,15 @@ def histogram_hsv(img: np.ndarray, bins: int = 256) -> np.ndarray:
     # Concatenate and normalize the combined histogram
     histogram = np.concatenate([a, b, c], axis=0)
     return histogram / np.sum(histogram)
+
+
+
+class DescriptorMethod(Enum):
+    GRAYSCALE = ("grayscale", histogram_grayscale)
+    RGB = ("rgb", histogram_rgb)
+    LAB = ("lab", histogram_lab)
+    HSV = ("hsv", histogram_hsv)
+
+    def __init__(self, type, descriptor):
+        self.type = type
+        self.descriptor = descriptor

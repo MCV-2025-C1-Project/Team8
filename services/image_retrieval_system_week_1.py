@@ -4,16 +4,10 @@ import pickle
 import json
 from PIL import Image
 from typing import List, Tuple, Dict, Any
-from enum import Enum
 from dataloader.dataloader import DataLoader, DatasetType
-from utils.descriptors import histogram_lab, histogram_hsv
+from utils.descriptors import DescriptorMethod, histogram_lab, histogram_hsv
 from utils.measures import MeasureType, SimilarityMeasure, hist_intersect
 from utils.metrics import mapk
-
-
-class DescriptorMethod(Enum):
-    LAB = "lab"
-    HSV = "hsv"
 
 
 class ImageRetrievalSystem:
@@ -26,7 +20,7 @@ class ImageRetrievalSystem:
         self.ground_truth: List[List[int]] = []
 
     def compute_descriptors(self, dataset_type: DatasetType, method: DescriptorMethod) -> None:
-        print(f"Computing {method.value} descriptors for {dataset_type.value} dataset...")
+        print(f"Computing {method.type} descriptors for {dataset_type.value} dataset...")
         if dataset_type == DatasetType.BBDD:
             loader = self.bbdd_loader
             target_dict = self.bbdd_descriptors
@@ -39,14 +33,9 @@ class ImageRetrievalSystem:
         target_dict.clear()
 
         for image_id, image, _, _ in loader.iterate_images():
-            if method == DescriptorMethod.LAB:
-                desc = histogram_lab(image)
-            elif method == DescriptorMethod.HSV:
-                desc = histogram_hsv(image)
-            else:
-                raise ValueError(f"Unknown method: {method}")
-
+            desc = method.descriptor(image)
             target_dict[image_id] = desc
+
         print(f"Computed descriptors for {len(target_dict)} images in {dataset_type.value} dataset")
 
     def load_ground_truth(self) -> None:
@@ -115,7 +104,7 @@ class ImageRetrievalSystem:
     def run_evaluation(self, method: DescriptorMethod, measure: SimilarityMeasure, save_results: bool = True) -> Dict[str, float]:
         """Run complete evaluation for a method."""
         print(f"\n{'='*60}")
-        print(f"EVALUATION: {method.value.upper()} METHOD")
+        print(f"EVALUATION: {method.type.upper()} METHOD")
         print(f"{'='*60}")
 
         # Load datasets
