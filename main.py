@@ -3,7 +3,8 @@
 Main entry point for the Image Retrieval System
 """
 
-from services.image_retrieval_system_week_1 import ImageRetrievalSystem, DescriptorMethod
+from services.image_retrieval_system_week_1 import ImageRetrievalSystem
+from utils.descriptors import DescriptorMethod
 from utils.measures import SimilarityMeasure
 
 def main():
