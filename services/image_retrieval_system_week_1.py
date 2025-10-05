@@ -14,26 +14,26 @@ from utils.preprocessing import PreprocessingMethod
 
 class DatasetRole(Enum):
     """Enum for dataset roles in the retrieval system."""
-    INDEX = "index"
-    QUERY = "query"
+    INDEX = "index" # BBDD
+    QUERY = "query" # QSD1_W1 or QST1_W1
 
 
 class ImageRetrievalSystem:
 
     def __init__(self):
-        self.query_dataset = DataLoader()
         self.index_dataset = DataLoader()
-        self.query_descriptors: Dict[int, np.ndarray] = {}
+        self.query_dataset = DataLoader()
         self.index_descriptors: Dict[int, np.ndarray] = {}
+        self.query_descriptors: Dict[int, np.ndarray] = {}
         self.ground_truth: List[List[int]] = []
 
     def compute_descriptors(self, role: DatasetRole, method: DescriptorMethod, preprocessing: PreprocessingMethod = PreprocessingMethod.NONE, **preprocessing_kwargs) -> None:
-        if role == DatasetRole.QUERY:
-            loader = self.query_dataset
-            target_dict = self.query_descriptors
-        elif role == DatasetRole.INDEX:
+        if role == DatasetRole.INDEX:
             loader = self.index_dataset
             target_dict = self.index_descriptors
+        elif role == DatasetRole.QUERY:
+            loader = self.query_dataset
+            target_dict = self.query_descriptors
         else:
             raise ValueError(f"Unknown dataset role: {role}")
 
