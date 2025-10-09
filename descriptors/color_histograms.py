@@ -3,7 +3,7 @@ import numpy as np
 import cv2
 from typing import Tuple
 from PIL import Image
-from utils.preprocessing import PreprocessingMethod
+from preprocessing.color_adjustments import PreprocessingMethod
 
 
 def histogram_grayscale(img: np.ndarray, bins: int = 256) -> np.ndarray:

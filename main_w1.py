@@ -7,7 +7,7 @@ from dataloader.dataloader import DatasetType
 from services.image_retrieval_system_week_1 import ImageRetrievalSystem
 from descriptors.color_histograms import DescriptorMethod
 from utils.measures import SimilarityMeasure
-from utils.preprocessing import PreprocessingMethod
+from preprocessing.color_adjustments import PreprocessingMethod
 
 def main():
     

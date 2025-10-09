@@ -1,6 +1,6 @@
 import numpy as np
 from descriptors.color_histograms import DescriptorMethod
-from utils.preprocessing import PreprocessingMethod
+from preprocessing.color_adjustments import PreprocessingMethod
 from utils.spatial import split_image_blocks
 
 def block_histogram(

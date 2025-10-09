@@ -10,7 +10,7 @@ from descriptors.color_histograms import DescriptorMethod
 from descriptors.spatial_histograms import block_histogram
 from utils.measures import SimilarityMeasure
 from utils.metrics import mapk
-from utils.preprocessing import PreprocessingMethod
+from preprocessing.color_adjustments import PreprocessingMethod
 
 
 class DatasetRole(Enum):
