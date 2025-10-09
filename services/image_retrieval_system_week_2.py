@@ -7,6 +7,7 @@ from typing import List, Tuple, Dict, Any
 from enum import Enum
 from dataloader.dataloader import DataLoader, DatasetType
 from descriptors.color_histograms import DescriptorMethod
+from descriptors.spatial_histograms import block_histogram
 from utils.measures import SimilarityMeasure
 from utils.metrics import mapk
 from utils.preprocessing import PreprocessingMethod
@@ -15,7 +16,7 @@ from utils.preprocessing import PreprocessingMethod
 class DatasetRole(Enum):
     """Enum for dataset roles in the retrieval system."""
     INDEX = "index" # BBDD
-    QUERY = "query" # QSD1_W1 or QST1_W1
+    QUERY = "query" # QSD1_W2 or QST1_W2
 
 
 class ImageRetrievalSystem:
@@ -30,10 +31,11 @@ class ImageRetrievalSystem:
     def compute_descriptors(
         self, 
         role: DatasetRole, 
-        method: DescriptorMethod, 
+        method: DescriptorMethod,
+        ns_blocks: List[int],
         bins: int = 256, 
-        preprocessing: PreprocessingMethod = PreprocessingMethod.NONE
-        , **preprocessing_kwargs
+        preprocessing: PreprocessingMethod = PreprocessingMethod.NONE,
+        **preprocessing_kwargs
     ) -> None:
         
         if role == DatasetRole.INDEX:
@@ -47,7 +49,7 @@ class ImageRetrievalSystem:
 
         target_dict.clear()
         for image_id, image, _, _ in loader.iterate_images():
-            desc = method.compute(image, bins=bins, preprocessing=preprocessing, **preprocessing_kwargs)
+            desc = block_histogram(image, method, ns_blocks, bins=bins, preprocessing=preprocessing, **preprocessing_kwargs)
             target_dict[image_id] = desc
 
         print(f"Computed descriptors for {len(target_dict)} images in {loader.dataset_type.name} dataset")
@@ -90,44 +92,10 @@ class ImageRetrievalSystem:
     def evaluate_map_at_k(self, predictions: List[List[int]], k: int) -> float:
         return mapk(self.ground_truth, predictions, k)
 
-    def save_results(self, predictions: List[List[int]], method: DescriptorMethod, metrics: Dict[str, float] = None) -> str:
-        if method == DescriptorMethod.LAB:
-            method_name = "method1"
-        elif method == DescriptorMethod.HSV:
-            method_name = "method2"
-        else:
-            raise ValueError(f"Unknown method: {method}")
-        
-        # Determine dataset name based on query dataset
-        if self.query_dataset.dataset_type == DatasetType.QSD1_W1:
-            dataset_name = "QSD1_W1"
-        elif self.query_dataset.dataset_type == DatasetType.QST1_W1:
-            dataset_name = "QST1_W1"
-        else:
-            raise ValueError(f"Unknown query dataset: {self.query_dataset.dataset_type}")
-            
-        results_dir = os.path.join("results", "week1", dataset_name, method_name)
-        os.makedirs(results_dir, exist_ok=True)
-        
-        # Save predictions as .pkl file (list of lists with integer image IDs)
-        pkl_filepath = os.path.join(results_dir, "result.pkl")
-        with open(pkl_filepath, 'wb') as f:
-            pickle.dump(predictions, f)
-        
-        # Save metrics as JSON file (human-readable) only if metrics are provided
-        if metrics:
-            json_filepath = os.path.join(results_dir, "metrics.json")
-            with open(json_filepath, 'w') as f:
-                json.dump(metrics, f, indent=2)
-            print(f"Metrics saved to: {json_filepath}")
-        
-        print(f"Results saved to: {pkl_filepath}")
-        print(f"Format: List of {len(predictions)} queries, each with K=10 best results")
-        return pkl_filepath
-
     def run(
         self, 
         method: DescriptorMethod, 
+        ns_blocks: List[int],
         measure: SimilarityMeasure, 
         index_dataset: DatasetType, 
         query_dataset: DatasetType, 
@@ -148,8 +116,8 @@ class ImageRetrievalSystem:
             self.load_ground_truth()
 
         # Compute descriptors
-        self.compute_descriptors(DatasetRole.QUERY, method, bins, preprocessing, **preprocessing_kwargs)
-        self.compute_descriptors(DatasetRole.INDEX, method, bins, preprocessing, **preprocessing_kwargs)
+        self.compute_descriptors(DatasetRole.INDEX, method, ns_blocks, bins, preprocessing, **preprocessing_kwargs)
+        self.compute_descriptors(DatasetRole.QUERY, method, ns_blocks, bins, preprocessing, **preprocessing_kwargs)
 
         # Generate predictions with K=10 for competition format
         predictions_k10 = self.retrieve_similar_images(measure, k=10)
@@ -165,13 +133,15 @@ class ImageRetrievalSystem:
             metrics = {"mAP@1": map_at_1, "mAP@5": map_at_5}
         
             if save_results:
-                self.save_results(predictions_k10, method, metrics)
+                pass
+                # self.save_results(predictions_k10, method, metrics)
 
             return metrics
         else:
             print("No ground truth available for evaluation")
             if save_results:
-                self.save_results(predictions_k10, method, None)
+                pass
+                # self.save_results(predictions_k10, method, None)
             return {}
 
         

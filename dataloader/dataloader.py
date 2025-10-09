@@ -10,6 +10,7 @@ class DatasetType(Enum):
     BBDD = "BBDD"
     QSD1_W1 = "qsd1_w1"
     QST1_W1 = "qst1_w1"
+    QSD2_W2 = "qsd2_w2"
 
 
 class DataLoader:
@@ -28,7 +29,7 @@ class DataLoader:
     def has_ground_truth(self) -> bool:
         if self.dataset_type is None:
             return False
-        return self.dataset_type in [DatasetType.BBDD, DatasetType.QSD1_W1]
+        return self.dataset_type in [DatasetType.BBDD, DatasetType.QSD1_W1, DatasetType.QSD2_W2]
 
     def load_dataset(self, dataset: DatasetType) -> None:
         """Load dataset by DatasetType enum."""
@@ -40,6 +41,8 @@ class DataLoader:
             self.load_qsd1_w1()
         elif dataset == DatasetType.QST1_W1:
             self.load_qst1_w1()
+        elif dataset == DatasetType.QSD2_W2:
+            self.load_qsd2_w2()
 
         self.dataset_type = dataset
 
@@ -208,6 +211,59 @@ class DataLoader:
             raise Exception(f"Error reading qst1_w1 directory: {e}")
 
         print(f"Successfully loaded {len(self.data)} images from qst1_w1 dataset")
+
+    def load_qsd2_w2(self) -> None:
+        """Load qsd2_w2 dataset: JPG images and gt_corresps.pkl."""
+        dataset_path = os.path.join(self.data_path, "qsd2_w2")
+
+        if not os.path.exists(dataset_path):
+            raise FileNotFoundError(f"qsd2_w2 dataset path not found: {dataset_path}")
+
+        gt_file = os.path.join(dataset_path, "gt_corresps.pkl")
+        gt_correspondences = []
+
+        if os.path.exists(gt_file):
+            try:
+                with open(gt_file, "rb") as f:
+                    gt_correspondences = pickle.load(f)
+            except Exception as e:
+                print(f"Warning: Error loading ground truth correspondences: {e}")
+
+        try:
+            files = [
+                f
+                for f in os.listdir(dataset_path)
+                if f.endswith(".jpg") and os.path.isfile(os.path.join(dataset_path, f))
+            ]
+
+            for filename in files:
+                try:
+                    name_without_ext = filename.split(".")[0]
+                    image_id = int(name_without_ext)
+
+                    jpg_filename = os.path.join(dataset_path, filename)
+                    image = np.array(Image.open(jpg_filename))
+
+                    gt_correspondence = (
+                        gt_correspondences[image_id]
+                        if image_id < len(gt_correspondences)
+                        else None
+                    )
+
+                    self.data[image_id] = {
+                        "image": image,
+                        "info": f"Query image {name_without_ext}",
+                        "relationship": gt_correspondence,
+                    }
+
+                except Exception as e:
+                    print(f"Warning: Error processing {filename}: {e}")
+                    continue
+
+        except Exception as e:
+            raise Exception(f"Error reading qsd2_w2 directory: {e}")
+
+        print(f"Successfully loaded {len(self.data)} images from qsd2_w2 dataset")
 
     def clear_dataset(self) -> None:
         self.data = {}

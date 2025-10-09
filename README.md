@@ -23,7 +23,7 @@ pip install -r requirements.txt
 
 ### 3. Run the Image Retrieval System
 ```bash
-python main.py
+python main_w1.py
 ```
 
 This will execute a **two-phase evaluation**:
