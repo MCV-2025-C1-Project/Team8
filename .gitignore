@@ -20,7 +20,6 @@ Thumbs.db
 
 # Results
 results/
-*.pkl
 
 # IDE/editor settings
 .vscode/
