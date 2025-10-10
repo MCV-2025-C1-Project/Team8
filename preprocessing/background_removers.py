@@ -158,7 +158,7 @@ def remove_background_by_rectangles(img: np.ndarray, offset: int, visualise: boo
 
         plt.subplot(1, 3, 2)
         plt.title("Mask")
-        plt.imshow(mask, cmap='gray')
+        plt.imshow(mask_inv, cmap='gray')
         plt.axis('off')
 
         plt.subplot(1, 3, 3)
@@ -168,7 +168,7 @@ def remove_background_by_rectangles(img: np.ndarray, offset: int, visualise: boo
 
         plt.show()
 
-    return result_bgr
+    return mask_inv
 
 
 
