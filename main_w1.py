@@ -7,7 +7,7 @@ from dataloader.dataloader import DatasetType, WeekFolder
 from services.image_retrieval_system import ImageRetrievalSystem
 from descriptors.descriptors import DescriptorMethod
 from utils.measures import SimilarityMeasure
-from preprocessing.color_adjustments import PreprocessingMethod
+from preprocessing.preprocessors import PreprocessingMethod
 
 def main():
     

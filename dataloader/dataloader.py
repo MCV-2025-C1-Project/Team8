@@ -224,7 +224,7 @@ class DataLoader:
         print(f"Successfully loaded {len(self.data)} images from qst1_w1 dataset")
 
     def load_qsd2_w2(self) -> None:
-        """Load qsd2_w2 dataset: JPG images and gt_corresps.pkl."""
+        """Load qsd2_w2 dataset: JPG images (original) and PNG images (background removed) with gt_corresps.pkl."""
         dataset_path = os.path.join(self.data_path, "qsd2_w2")
 
         if not os.path.exists(dataset_path):
@@ -241,19 +241,31 @@ class DataLoader:
                 print(f"Warning: Error loading ground truth correspondences: {e}")
 
         try:
-            files = [
+            # Get all JPG files (original images)
+            jpg_files = [
                 f
                 for f in os.listdir(dataset_path)
                 if f.endswith(".jpg") and os.path.isfile(os.path.join(dataset_path, f))
             ]
 
-            for filename in files:
+            for jpg_filename in jpg_files:
                 try:
-                    name_without_ext = filename.split(".")[0]
+                    name_without_ext = jpg_filename.split(".")[0]
                     image_id = int(name_without_ext)
 
-                    jpg_filename = os.path.join(dataset_path, filename)
-                    image = np.array(Image.open(jpg_filename))
+                    # Load original JPG image
+                    jpg_path = os.path.join(dataset_path, jpg_filename)
+                    original_image = np.array(Image.open(jpg_path))
+
+                    # Load corresponding PNG image (background removed)
+                    png_filename = f"{name_without_ext}.png"
+                    png_path = os.path.join(dataset_path, png_filename)
+                    background_removed_image = None
+                    
+                    if os.path.exists(png_path):
+                        background_removed_image = np.array(Image.open(png_path))
+                    else:
+                        print(f"Warning: PNG file not found for {name_without_ext}")
 
                     gt_correspondence = (
                         gt_correspondences[image_id]
@@ -262,19 +274,20 @@ class DataLoader:
                     )
 
                     self.data[image_id] = {
-                        "image": image,
-                        "info": f"Query image {name_without_ext}",
+                        "image": original_image,  # Original image with background
+                        "background_removed": background_removed_image,  # Image with background removed
+                        "info": f"Query image {name_without_ext} (original + background removed)",
                         "relationship": gt_correspondence,
                     }
 
                 except Exception as e:
-                    print(f"Warning: Error processing {filename}: {e}")
+                    print(f"Warning: Error processing {jpg_filename}: {e}")
                     continue
 
         except Exception as e:
             raise Exception(f"Error reading qsd2_w2 directory: {e}")
 
-        print(f"Successfully loaded {len(self.data)} images from qsd2_w2 dataset")
+        print(f"Successfully loaded {len(self.data)} images from qsd2_w2 dataset (with both original and background-removed versions)")
 
     def load_qst1_w2(self) -> None:
         """Load qst1_w2 dataset: JPG images."""

@@ -1,6 +1,6 @@
 from enum import Enum
 from typing import List
-from preprocessing.color_adjustments import PreprocessingMethod
+from preprocessing.preprocessors import PreprocessingMethod
 from descriptors.color_histograms import histogram_grayscale, histogram_rgb, histogram_lab, histogram_hsv
 from descriptors.spatial_histograms import block_histogram, spatial_pyramid_histogram
 

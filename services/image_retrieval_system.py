@@ -9,7 +9,7 @@ from dataloader.dataloader import DataLoader, DatasetType, WeekFolder
 from descriptors.descriptors import DescriptorMethod
 from utils.measures import SimilarityMeasure
 from utils.metrics import mapk
-from preprocessing.color_adjustments import PreprocessingMethod
+from preprocessing.preprocessors import PreprocessingMethod
 
 
 class DatasetRole(Enum):

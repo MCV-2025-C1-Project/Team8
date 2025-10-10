@@ -2,6 +2,24 @@ import cv2
 import numpy as np
 np.set_printoptions(precision=2)
 import matplotlib.pyplot as plt
+from enum import Enum
+
+
+class BackgroundRemovalMethod(Enum):
+    """Enum for background removal methods."""
+    KMEANS = "kmeans"
+    RECTANGLES = "rectangles"
+
+
+def get_background_removal_function(method: BackgroundRemovalMethod):
+
+    if method == BackgroundRemovalMethod.KMEANS:
+        return remove_background_by_kmeans
+    elif method == BackgroundRemovalMethod.RECTANGLES:
+        return remove_background_by_rectangles
+    else:
+        raise ValueError(f"Unknown background removal method: {method}")
+
 
 def remove_background_by_kmeans(img: np.ndarray, k: int = 5, margin: int = 45):
     h, w = img.shape[:2]

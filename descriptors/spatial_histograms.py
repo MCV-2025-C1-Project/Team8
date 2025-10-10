@@ -1,6 +1,6 @@
 import numpy as np
 from typing import Callable, List
-from preprocessing.color_adjustments import PreprocessingMethod
+from preprocessing.preprocessors import PreprocessingMethod
 from utils.spatial import split_image_blocks
 
 def block_histogram(
