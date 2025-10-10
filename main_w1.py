@@ -12,16 +12,16 @@ from preprocessing.color_adjustments import PreprocessingMethod
 def main():
     
     print("=" * 50)
-    print("IMAGE RETRIEVAL SYSTEM - WEEK 1")
+    print("🔎 IMAGE RETRIEVAL SYSTEM - WEEK 1")
     print("=" * 50)
 
     retrieval_system = ImageRetrievalSystem()
 
-    print("\nVALIDATION PHASE (QSD1_W1)")
+    print("\n📊 VALIDATION PHASE (QSD1_W1)")
     print("-" * 30)
 
     # LAB 
-    print("\nMETHOD 1: CieLab Histogram")
+    print("\n✨ METHOD 1: CieLab Histogram")
     lab_results = retrieval_system.run(
         method=DescriptorMethod.LAB,
         measure=SimilarityMeasure.HIST_INTERSECT,
@@ -34,7 +34,7 @@ def main():
     )
 
     # HSV 
-    print("\nMETHOD 2: HSV Histogram")
+    print("\n✨ METHOD 2: HSV Histogram")
     hsv_results = retrieval_system.run(
         method=DescriptorMethod.HSV,
         measure=SimilarityMeasure.HIST_INTERSECT,
@@ -46,16 +46,16 @@ def main():
         preprocessing=PreprocessingMethod.HIST_EQ,
     )
 
-    print("\nVALIDATION RESULTS")
+    print("\n✅ VALIDATION RESULTS")
     print("-" * 20)
     print(f"CieLab:  mAP@1={lab_results.get('mAP@1', float('nan')):.3f}, mAP@5={lab_results.get('mAP@5', float('nan')):.3f}")
     print(f"HSV:     mAP@1={hsv_results.get('mAP@1', float('nan')):.3f}, mAP@5={hsv_results.get('mAP@5', float('nan')):.3f}")
 
-    print("\nTEST PHASE (QST1_W1)")
+    print("\n🧪 TEST PHASE (QST1_W1)")
     print("-" * 25)
 
     # LAB on QST1_W1 
-    print("\nMETHOD 1 TEST: CieLab Histogram")
+    print("\n🚀 METHOD 1 TEST: CieLab Histogram")
     retrieval_system.run(
         method=DescriptorMethod.LAB,
         measure=SimilarityMeasure.HIST_INTERSECT,
@@ -68,7 +68,7 @@ def main():
     )
 
     # HSV on QST1_W1 
-    print("\nMETHOD 2 TEST: HSV Histogram")
+    print("\n🚀 METHOD 2 TEST: HSV Histogram")
     retrieval_system.run(
         method=DescriptorMethod.HSV,
         measure=SimilarityMeasure.HIST_INTERSECT,
@@ -80,8 +80,8 @@ def main():
         preprocessing=PreprocessingMethod.HIST_EQ,
     )
 
-    print("\nCOMPLETED")
-    print("Results saved to results/week_1/QSD1_W1/ & results/week_1/QST1_W1/")
+    print("\n🎉 COMPLETED")
+    print("📁 Results saved to results/week1/QSD1_W1/ & results/week1/QST1_W1/")
 
 
 if __name__ == "__main__":
