@@ -100,11 +100,18 @@ class ImageRetrievalSystem:
     def evaluate_map_at_k(self, predictions: List[List[int]], k: int) -> float:
         return mapk(self.ground_truth, predictions, k)
 
-    def save_results(self, predictions: List[List[int]], method: DescriptorMethod, week_folder: WeekFolder, metrics: Dict[str, float] = None, dataset_name: str = None) -> str:
-        # Determine method name based on descriptor
-        if method == DescriptorMethod.LAB:
+    def save_results(
+        self, 
+        predictions: List[List[int]], 
+        method: DescriptorMethod, 
+        week_folder: WeekFolder, 
+        metrics: Dict[str, float] = None, 
+        dataset_name: str = None
+    ) -> str:
+        # Determine method name based on descriptor and week folder
+        if method == DescriptorMethod.LAB and week_folder == WeekFolder.WEEK_1:
             method_name = "method1"
-        elif method == DescriptorMethod.HSV:
+        elif method == DescriptorMethod.HSV and week_folder == WeekFolder.WEEK_1:
             method_name = "method2"
         else:
             method_name = f"method_{method.value}"
