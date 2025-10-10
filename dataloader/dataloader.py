@@ -11,6 +11,8 @@ class DatasetType(Enum):
     QSD1_W1 = "qsd1_w1"
     QST1_W1 = "qst1_w1"
     QSD2_W2 = "qsd2_w2"
+    QST1_W2 = "qst1_w2"
+    QST2_W2 = "qst2_w2"
 
 
 class DataLoader:
@@ -43,6 +45,10 @@ class DataLoader:
             self.load_qst1_w1()
         elif dataset == DatasetType.QSD2_W2:
             self.load_qsd2_w2()
+        elif dataset == DatasetType.QST1_W2:
+            self.load_qst1_w2()
+        elif dataset == DatasetType.QST2_W2:
+            self.load_qst2_w2()
 
         self.dataset_type = dataset
 
@@ -264,6 +270,80 @@ class DataLoader:
             raise Exception(f"Error reading qsd2_w2 directory: {e}")
 
         print(f"Successfully loaded {len(self.data)} images from qsd2_w2 dataset")
+
+    def load_qst1_w2(self) -> None:
+        """Load qst1_w2 dataset: JPG images."""
+        dataset_path = os.path.join(self.data_path, "qst1_w2")
+
+        if not os.path.exists(dataset_path):
+            raise FileNotFoundError(f"qst1_w2 dataset path not found: {dataset_path}")
+
+        try:
+            files = [
+                f
+                for f in os.listdir(dataset_path)
+                if f.endswith(".jpg") and os.path.isfile(os.path.join(dataset_path, f))
+            ]
+
+            for filename in files:
+                try:
+                    name_without_ext = filename.split(".")[0]
+                    image_id = int(name_without_ext)
+
+                    jpg_filename = os.path.join(dataset_path, filename)
+                    image = np.array(Image.open(jpg_filename))
+
+                    self.data[image_id] = {
+                        "image": image,
+                        "info": f"Query image {name_without_ext}",
+                        "relationship": None,
+                    }
+
+                except Exception as e:
+                    print(f"Warning: Error processing {filename}: {e}")
+                    continue
+
+        except Exception as e:
+            raise Exception(f"Error reading qst1_w2 directory: {e}")
+
+        print(f"Successfully loaded {len(self.data)} images from qst1_w2 dataset")
+
+    def load_qst2_w2(self) -> None:
+        """Load qst2_w2 dataset: JPG images."""
+        dataset_path = os.path.join(self.data_path, "qst2_w2")
+
+        if not os.path.exists(dataset_path):
+            raise FileNotFoundError(f"qst2_w2 dataset path not found: {dataset_path}")
+
+        try:
+            files = [
+                f
+                for f in os.listdir(dataset_path)
+                if f.endswith(".jpg") and os.path.isfile(os.path.join(dataset_path, f))
+            ]
+
+            for filename in files:
+                try:
+                    name_without_ext = filename.split(".")[0]
+                    image_id = int(name_without_ext)
+
+                    jpg_filename = os.path.join(dataset_path, filename)
+                    image = np.array(Image.open(jpg_filename))
+
+                    self.data[image_id] = {
+                        "image": image,
+                        "info": f"Query image {name_without_ext}",
+                        "relationship": None,
+                    }
+
+                except Exception as e:
+                    print(f"Warning: Error processing {filename}: {e}")
+                    continue
+
+        except Exception as e:
+            raise Exception(f"Error reading qst2_w2 directory: {e}")
+
+        print(f"Successfully loaded {len(self.data)} images from qst2_w2 dataset")
 
     def clear_dataset(self) -> None:
         self.data = {}
