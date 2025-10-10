@@ -1,7 +1,18 @@
 import numpy as np
 
 def split_image_blocks(image: np.ndarray, n: int) -> list[np.ndarray]:
+
+    if len(image.shape) < 2:
+        raise ValueError("Image must be at least 2D")
+    
+    if n <= 0:
+        raise ValueError("Number of blocks must be positive")
+    
     height, width = image.shape[:2]
+    
+    if n > height or n > width:
+        raise ValueError(f"Number of blocks ({n}) cannot exceed image dimensions ({height}x{width})")
+    
     block_height = height // n
     block_width = width // n
 
@@ -16,16 +27,3 @@ def split_image_blocks(image: np.ndarray, n: int) -> list[np.ndarray]:
             blocks.append(block)
 
     return blocks
-
-if __name__ == "__main__":
-    import cv2
-    img = cv2.imread("data/BBDD/bbdd_00000.jpg")
-    blocks = split_image_blocks(img, 4)
-
-    import matplotlib.pyplot as plt
-    fig, axs = plt.subplots(4, 4, figsize=(8, 8))
-    for i in range(4):
-        for j in range(4):
-            axs[i, j].imshow(cv2.cvtColor(blocks[i * 4 + j], cv2.COLOR_BGR2RGB))
-            axs[i, j].axis('off')
-    plt.show()

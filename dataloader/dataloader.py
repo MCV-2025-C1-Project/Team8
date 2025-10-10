@@ -15,6 +15,11 @@ class DatasetType(Enum):
     QST2_W2 = "qst2_w2"
 
 
+class WeekFolder(Enum):
+    WEEK_1 = "week_1"
+    WEEK_2 = "week_2"
+
+
 class DataLoader:
     """Load and manage BBDD and qsd1_w1 computer vision datasets."""
 

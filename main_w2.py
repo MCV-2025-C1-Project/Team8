@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-from dataloader.dataloader import DatasetType
-from services.image_retrieval_system_week_2 import ImageRetrievalSystem
-from descriptors.color_histograms import DescriptorMethod
+from dataloader.dataloader import DatasetType, WeekFolder
+from services.image_retrieval_system import ImageRetrievalSystem
+from descriptors.descriptors import DescriptorMethod
 from utils.measures import SimilarityMeasure
 from preprocessing.color_adjustments import PreprocessingMethod
 
@@ -18,25 +18,27 @@ def main():
     print("-" * 30)
 
     # LAB 
-    print("\n✨ METHOD 1: CieLab Histogram")
+    print("\n✨ METHOD 1: CieLab Block Histogram")
     lab_results = retrieval_system.run(
-        method=DescriptorMethod.LAB,
+        method=DescriptorMethod.LAB_BLOCKS,
         ns_blocks=[1, 2, 3],
         measure=SimilarityMeasure.HIST_INTERSECT,
         index_dataset=DatasetType.BBDD,
         query_dataset=DatasetType.QSD1_W1,
+        week_folder=WeekFolder.WEEK_2,
         save_results=True,
         bins=32,
         # preprocessing=PreprocessingMethod.GAMMA,
     )
     # HSV 
-    print("\n✨ METHOD 2: HSV Histogram")
+    print("\n✨ METHOD 2: HSV Block Histogram")
     hsv_results = retrieval_system.run(
-        method=DescriptorMethod.HSV,
+        method=DescriptorMethod.HSV_BLOCKS,
         ns_blocks=[1, 2, 3],
         measure=SimilarityMeasure.HIST_INTERSECT,
         index_dataset=DatasetType.BBDD,
         query_dataset=DatasetType.QSD1_W1,
+        week_folder=WeekFolder.WEEK_2,
         save_results=True,
         bins=32,
         preprocessing=PreprocessingMethod.HIST_EQ,

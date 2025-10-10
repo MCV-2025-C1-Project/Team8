@@ -1,9 +1,7 @@
-from enum import Enum
 import numpy as np
 import cv2
 from typing import Tuple
 from PIL import Image
-from preprocessing.color_adjustments import PreprocessingMethod
 
 
 def histogram_grayscale(img: np.ndarray, bins: int = 256) -> np.ndarray:
@@ -129,39 +127,3 @@ def histogram_hsv(img: np.ndarray, bins: int = 256) -> np.ndarray:
     # Concatenate and normalize the combined histogram
     histogram = np.concatenate([a, b, c], axis=0)
     return histogram / np.sum(histogram)
-
-
-
-class DescriptorMethod(Enum):
-    GRAYSCALE = "grayscale"
-    RGB = "rgb"
-    LAB = "lab"
-    HSV = "hsv"
-    
-    def compute(
-        self, 
-        img: np.ndarray, 
-        bins: int = 256, 
-        preprocessing: PreprocessingMethod = PreprocessingMethod.NONE, 
-        **preprocessing_kwargs
-    ) -> np.ndarray:
-        
-        """Compute the descriptor for the given image with optional preprocessing."""
-        # Apply preprocessing
-        if preprocessing != PreprocessingMethod.NONE:
-            img = preprocessing.apply(img, **preprocessing_kwargs)
-        
-        if self == DescriptorMethod.GRAYSCALE:
-            return histogram_grayscale(img, bins)
-        elif self == DescriptorMethod.RGB:
-            return histogram_rgb(img, bins)
-        elif self == DescriptorMethod.LAB:
-            return histogram_lab(img, bins)
-        elif self == DescriptorMethod.HSV:
-            return histogram_hsv(img, bins)
-        else:
-            raise ValueError(f"Unknown descriptor method: {self}")
-    
-    @property
-    def name(self) -> str:
-        return self.value.upper()

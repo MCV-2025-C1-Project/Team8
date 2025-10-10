@@ -5,8 +5,8 @@ import json
 from PIL import Image
 from typing import List, Tuple, Dict, Any
 from enum import Enum
-from dataloader.dataloader import DataLoader, DatasetType
-from descriptors.color_histograms import DescriptorMethod
+from dataloader.dataloader import DataLoader, DatasetType, WeekFolder
+from descriptors.descriptors import DescriptorMethod
 from utils.measures import SimilarityMeasure
 from utils.metrics import mapk
 from preprocessing.color_adjustments import PreprocessingMethod
@@ -15,7 +15,7 @@ from preprocessing.color_adjustments import PreprocessingMethod
 class DatasetRole(Enum):
     """Enum for dataset roles in the retrieval system."""
     INDEX = "index" # BBDD
-    QUERY = "query" # QSD1_W1 or QST1_W1
+    QUERY = "query" # QSD1_W1, QST1_W1, QSD2_W2, QST1_W2, QST2_W2
 
 
 class ImageRetrievalSystem:
@@ -32,8 +32,11 @@ class ImageRetrievalSystem:
         role: DatasetRole, 
         method: DescriptorMethod, 
         bins: int = 256, 
-        preprocessing: PreprocessingMethod = PreprocessingMethod.NONE
-        , **preprocessing_kwargs
+        preprocessing: PreprocessingMethod = PreprocessingMethod.NONE,
+        # Spatial parameters
+        ns_blocks: List[int] = None,
+        max_level: int = 2,
+        **preprocessing_kwargs
     ) -> None:
         
         if role == DatasetRole.INDEX:
@@ -47,7 +50,14 @@ class ImageRetrievalSystem:
 
         target_dict.clear()
         for image_id, image, _, _ in loader.iterate_images():
-            desc = method.compute(image, bins=bins, preprocessing=preprocessing, **preprocessing_kwargs)
+            desc = method.compute(
+                image, 
+                bins=bins, 
+                preprocessing=preprocessing,
+                ns_blocks=ns_blocks,
+                max_level=max_level,
+                **preprocessing_kwargs
+            )
             target_dict[image_id] = desc
 
         print(f"Computed descriptors for {len(target_dict)} images in {loader.dataset_type.name} dataset")
@@ -90,23 +100,23 @@ class ImageRetrievalSystem:
     def evaluate_map_at_k(self, predictions: List[List[int]], k: int) -> float:
         return mapk(self.ground_truth, predictions, k)
 
-    def save_results(self, predictions: List[List[int]], method: DescriptorMethod, metrics: Dict[str, float] = None) -> str:
+    def save_results(self, predictions: List[List[int]], method: DescriptorMethod, week_folder: WeekFolder, metrics: Dict[str, float] = None, dataset_name: str = None) -> str:
+        # Determine method name based on descriptor
         if method == DescriptorMethod.LAB:
             method_name = "method1"
         elif method == DescriptorMethod.HSV:
             method_name = "method2"
         else:
-            raise ValueError(f"Unknown method: {method}")
+            method_name = f"method_{method.value}"
         
-        # Determine dataset name based on query dataset
-        if self.query_dataset.dataset_type == DatasetType.QSD1_W1:
-            dataset_name = "QSD1_W1"
-        elif self.query_dataset.dataset_type == DatasetType.QST1_W1:
-            dataset_name = "QST1_W1"
-        else:
-            raise ValueError(f"Unknown query dataset: {self.query_dataset.dataset_type}")
+        # Determine dataset name - use provided name or fall back to loaded dataset
+        if dataset_name is None:
+            if self.query_dataset.dataset_type is not None:
+                dataset_name = self.query_dataset.dataset_type.value.upper()
+            else:
+                dataset_name = "UNKNOWN"
             
-        results_dir = os.path.join("results", "week1", dataset_name, method_name)
+        results_dir = os.path.join("results", week_folder.value, dataset_name, method_name)
         os.makedirs(results_dir, exist_ok=True)
         
         # Save predictions as .pkl file (list of lists with integer image IDs)
@@ -131,9 +141,13 @@ class ImageRetrievalSystem:
         measure: SimilarityMeasure, 
         index_dataset: DatasetType, 
         query_dataset: DatasetType, 
+        week_folder: WeekFolder,
         save_results: bool = True, 
         bins: int = 256, 
-        preprocessing: PreprocessingMethod = PreprocessingMethod.NONE, 
+        preprocessing: PreprocessingMethod = PreprocessingMethod.NONE,
+        # Spatial parameters
+        ns_blocks: List[int] = None,
+        max_level: int = 2,
         **preprocessing_kwargs
     ) -> Dict[str, float]:
         
@@ -148,8 +162,24 @@ class ImageRetrievalSystem:
             self.load_ground_truth()
 
         # Compute descriptors
-        self.compute_descriptors(DatasetRole.QUERY, method, bins, preprocessing, **preprocessing_kwargs)
-        self.compute_descriptors(DatasetRole.INDEX, method, bins, preprocessing, **preprocessing_kwargs)
+        self.compute_descriptors(
+            DatasetRole.QUERY, 
+            method, 
+            bins, 
+            preprocessing, 
+            ns_blocks=ns_blocks,
+            max_level=max_level,
+            **preprocessing_kwargs
+        )
+        self.compute_descriptors(
+            DatasetRole.INDEX, 
+            method, 
+            bins, 
+            preprocessing,
+            ns_blocks=ns_blocks,
+            max_level=max_level,
+            **preprocessing_kwargs
+        )
 
         # Generate predictions with K=10 for competition format
         predictions_k10 = self.retrieve_similar_images(measure, k=10)
@@ -165,13 +195,11 @@ class ImageRetrievalSystem:
             metrics = {"mAP@1": map_at_1, "mAP@5": map_at_5}
         
             if save_results:
-                self.save_results(predictions_k10, method, metrics)
+                self.save_results(predictions_k10, method, week_folder, metrics)
 
             return metrics
         else:
             print("No ground truth available for evaluation")
             if save_results:
-                self.save_results(predictions_k10, method, None)
+                self.save_results(predictions_k10, method, week_folder, None)
             return {}
-
-        
