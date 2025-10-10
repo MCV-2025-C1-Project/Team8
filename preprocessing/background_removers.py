@@ -1,9 +1,9 @@
 import cv2
 import numpy as np
+np.set_printoptions(precision=2)
 import matplotlib.pyplot as plt
 
 def remove_background_by_kmeans(img: np.ndarray, k: int = 5, margin: int = 45):
-
     h, w = img.shape[:2]
     img_blurred = cv2.GaussianBlur(img, (7, 7), 0)
     img_lab = cv2.cvtColor(img_blurred, cv2.COLOR_BGR2Lab)
@@ -98,12 +98,91 @@ def remove_background_by_kmeans(img: np.ndarray, k: int = 5, margin: int = 45):
 
     plt.show()
 
+def remove_background_by_rectangles(img: np.ndarray, offset: int, visualise: bool = False):
+    # convert to hsv
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
+    h, w = hsv.shape[:2]
+    top = hsv[:offset, :, :]
+    bottom = hsv[h-offset:, :, :]
+    right = hsv[:, w-offset:, :]
+    left = hsv[:, :offset, :]
+
+    mean_top = np.mean(top.reshape(-1, 3), axis=0)
+    mean_bottom = np.mean(bottom.reshape(-1, 3), axis=0)
+    mean_left = np.mean(left.reshape(-1, 3), axis=0)
+    mean_right = np.mean(right.reshape(-1, 3), axis=0)
+
+    mean_background = np.mean([mean_top, mean_bottom, mean_left, mean_right], axis=0)
+
+    # define thresholds
+    h_delta, s_delta, v_delta = 20, 60, 60
+    lower_bound = np.array([
+        max(mean_background[0] - h_delta, 0),
+        max(mean_background[1] - s_delta, 0),
+        max(mean_background[2] - v_delta, 0)
+    ], dtype=np.uint8)
+
+    upper_bound = np.array([
+        min(mean_background[0] + h_delta, 179),
+        min(mean_background[1] + s_delta, 255),
+        min(mean_background[2] + v_delta, 255)
+    ], dtype=np.uint8)
+    mask = cv2.inRange(hsv, lower_bound, upper_bound)
+
+
+    # background suppression stronger near edges, weaker near center
+    y, x = np.indices((h, w))
+    dist_edge = np.minimum.reduce([x, y, w - 1 - x, h - 1 - y]).astype(np.float32)
+    # decay rate controls how fast background suppression drops toward center
+    decay = 0.005
+    weight = np.exp(-decay * dist_edge)
+    weighted_mask = (mask.astype(np.float32) * weight).astype(np.uint8)
+    # binarise weighted mask
+    _, weighted_mask_bin = cv2.threshold(weighted_mask, 128, 255, cv2.THRESH_BINARY)
+
+    # invert and apply mask
+    mask_inv = cv2.bitwise_not(weighted_mask_bin)
+    result_hsv = cv2.bitwise_and(hsv, hsv, mask=mask_inv)
+    result_bgr = cv2.cvtColor(result_hsv, cv2.COLOR_HSV2BGR)
+
+
+    result_bgr = cv2.cvtColor(result_hsv, cv2.COLOR_HSV2BGR)
+    if visualise:
+        plt.figure(figsize=(12, 6))
+
+        plt.subplot(1, 3, 1)
+        plt.title("Original")
+        plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+        plt.axis('off')
+
+        plt.subplot(1, 3, 2)
+        plt.title("Mask")
+        plt.imshow(mask, cmap='gray')
+        plt.axis('off')
+
+        plt.subplot(1, 3, 3)
+        plt.title("Result")
+        plt.imshow(cv2.cvtColor(result_bgr, cv2.COLOR_BGR2RGB))
+        plt.axis('off')
+
+        plt.show()
+
+    return result_bgr
+
+
+
 if __name__ == "__main__":
+    remover = "rectangles"
+
     import glob
     path = "data/qsd2_w2/"
     import time
     init_time = time.time()
     for image_path in glob.glob(f"{path}*.jpg"):
         img = cv2.imread(image_path)
-        remove_background_by_kmeans(img)
+        if remover == "kmeans":
+            mask = remove_background_by_kmeans(img)
+        elif remover == "rectangles":
+            mask = remove_background_by_rectangles(img, offset=50, visualise=True)
     print("Temps total:", time.time() - init_time)
