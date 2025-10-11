@@ -170,7 +170,7 @@ if __name__ == "__main__":
     print("on QSD2_W2 images and extracts precision, recall, and F1 metrics.")
     print("=" * 50)
     
-    # Test with different images
+    # Test with one image
     test_images = ["00001"]
     
     for i, image_id in enumerate(test_images):
