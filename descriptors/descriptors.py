@@ -3,6 +3,7 @@ from typing import List
 from preprocessing.preprocessors import PreprocessingMethod
 from descriptors.color_histograms import histogram_grayscale, histogram_rgb, histogram_lab, histogram_hsv
 from descriptors.spatial_histograms import block_histogram, spatial_pyramid_histogram
+from descriptors.three_d_histograms import three_d_histogram
 
 
 
@@ -13,6 +14,11 @@ class DescriptorMethod(Enum):
     LAB = "lab"
     HSV = "hsv"
     
+    # 3D histograms
+    RGB_3D = "rgb_3d"
+    LAB_3D = "lab_3d"
+    HSV_3D = "hsv_3d"
+
     # Block histograms
     GRAYSCALE_BLOCKS = "grayscale_blocks"
     RGB_BLOCKS = "rgb_blocks"
@@ -66,6 +72,11 @@ class DescriptorMethod(Enum):
             color_function = color_function_map[self]
             return color_function(img, bins)
         
+        elif self.is_3d_histogram:
+            # computation in-place (gets regular rgb, lab or hsv histogram and
+            # rearranges its 3 concatenated histograms into a 3D histogram)
+            return three_d_histogram(img)
+
         elif self.is_block_histogram:
             if ns_blocks is None:
                 ns_blocks = [1, 2, 3]  # Default block configuration
@@ -91,8 +102,12 @@ class DescriptorMethod(Enum):
     
     @property
     def is_color_only(self) -> bool:
-        return not self.is_spatial
+        return "_" not in self.value 
     
+    @property
+    def is_3d_histogram(self) -> bool:
+        return self.value.endswith("_3d")
+
     @property
     def is_block_histogram(self) -> bool:
         return self.value.endswith("_blocks")
