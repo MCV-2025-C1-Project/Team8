@@ -22,6 +22,10 @@ def histogram_grayscale(img: np.ndarray, bins: int = 256) -> np.ndarray:
     elif img.ndim != 2:
         raise ValueError("Image must be 2D (grayscale) or 3D (RGB)")
 
+    # Ignore fully black pixels (0,0,0)
+    mask = np.any(img != [0, 0, 0], axis=2)
+    img = img[mask].reshape(-1, 1, 3)
+
     # Fixed-length histogram using explicit bin edges over [0, 256)
     pixel_intensities = img.flatten()
     histogram, _ = np.histogram(pixel_intensities, bins=bins, range=(0, 256))
@@ -46,6 +50,10 @@ def histogram_rgb(img: np.ndarray, bins: int = 256) -> np.ndarray:
         img = np.stack([img, img, img], axis=2)
     elif img.ndim != 3 or img.shape[2] != 3:
         raise ValueError("Image must be 2D (grayscale) or 3D (RGB)")
+    
+    # Ignore fully black pixels (0,0,0)
+    mask = np.any(img != [0, 0, 0], axis=2)
+    img = img[mask].reshape(-1, 1, 3)
 
     # Compute histogram for each channel separately with fixed bins
     a, _ = np.histogram(img[:, :, 0].flatten(), bins=bins, range=(0, 256))
@@ -77,6 +85,10 @@ def histogram_lab(img: np.ndarray, bins: int = 256) -> np.ndarray:
         img = np.stack([img, img, img], axis=2)
     elif img.ndim != 3 or img.shape[2] != 3:
         raise ValueError("Image must be 2D (grayscale) or 3D (RGB)")
+
+    # Ignore fully black pixels (0,0,0)
+    mask = np.any(img != [0, 0, 0], axis=2)
+    img = img[mask].reshape(-1, 1, 3)
 
     # Convert RGB to L*a*b*
     lab_img = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
@@ -111,6 +123,10 @@ def histogram_hsv(img: np.ndarray, bins: int = 256) -> np.ndarray:
         img = np.stack([img, img, img], axis=2)
     elif img.ndim != 3 or img.shape[2] != 3:
         raise ValueError("Image must be 2D (grayscale) or 3D (RGB)")
+
+    # Ignore fully black pixels (0,0,0)
+    mask = np.any(img != [0, 0, 0], axis=2)
+    img = img[mask].reshape(-1, 1, 3)
 
     # Convert RGB to HSV
     hsv_img = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
