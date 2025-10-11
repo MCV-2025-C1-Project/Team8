@@ -116,6 +116,14 @@ def remove_background_by_kmeans(img: np.ndarray, k: int = 5, margin: int = 45):
     plt.axis("off")
 
     plt.show()
+    
+    # Convert mask to 0-255 range for consistency
+    mask_255 = (mask * 255).astype(np.uint8)
+    
+    # Apply mask to original image to create processed image
+    processed_img = cv2.bitwise_and(img, img, mask=mask_255)
+    
+    return mask_255, processed_img
 
 def remove_background_by_rectangles(
         img: np.ndarray,
@@ -154,8 +162,6 @@ def remove_background_by_rectangles(
         min(mean_background[2] + v_delta, 255)
     ], dtype=np.uint8)
     mask = cv2.inRange(hsv, lower_bound, upper_bound)
-
-    print(f"Mean background colour is {mean_background}.\nLower bound is {lower_bound}.\nUpper bound is {upper_bound}.")
 
     # background suppression stronger near edges, weaker near center
     y, x = np.indices((h, w))
@@ -225,7 +231,7 @@ def remove_background_by_rectangles(
         plt.tight_layout()
         plt.show()
 
-    return mask_inv
+    return mask_inv, result_bgr
 
 
 if __name__ == "__main__":

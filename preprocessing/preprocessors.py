@@ -50,11 +50,14 @@ class PreprocessingMethod(Enum):
         elif self == PreprocessingMethod.BG_KMEANS:
             k = kwargs.get('k', 5)
             margin = kwargs.get('margin', 45)
-            return remove_background_by_kmeans(img, k, margin)
+            return remove_background_by_kmeans(img, k, margin)[1]  # Return only processed image
         elif self == PreprocessingMethod.BG_RECTANGLES:
             offset = kwargs.get('offset', 50)
+            h_delta = kwargs.get('h_delta', 20)
+            s_delta = kwargs.get('s_delta', 60)
+            v_delta = kwargs.get('v_delta', 60)
             visualise = kwargs.get('visualise', False)
-            return remove_background_by_rectangles(img, offset, visualise)
+            return remove_background_by_rectangles(img, offset, h_delta, s_delta, v_delta, visualise)[1]  # Return only processed image
         else:
             raise ValueError(f"Unknown preprocessing method: {self}")
     

@@ -15,6 +15,8 @@ from descriptors.descriptors import DescriptorMethod
 from utils.measures import SimilarityMeasure
 from utils.metrics import mapk, evaluate_background_removal
 from preprocessing.preprocessors import PreprocessingMethod
+from preprocessing.background_removers import remove_background_by_kmeans, remove_background_by_rectangles
+
 
 
 class BackgroundRemovalImageRetrievalSystem:
@@ -51,7 +53,13 @@ class BackgroundRemovalImageRetrievalSystem:
         if not preprocessing.is_background_removal:
             raise ValueError(f"Preprocessing method {preprocessing} is not a background removal method")
         
-        self.background_removal_function = preprocessing.apply
+        # Store the preprocessing method and get the actual function
+        if preprocessing == PreprocessingMethod.BG_KMEANS:
+            self.background_removal_function = remove_background_by_kmeans
+        elif preprocessing == PreprocessingMethod.BG_RECTANGLES:
+            self.background_removal_function = remove_background_by_rectangles
+        else:
+            raise ValueError(f"Unknown background removal method: {preprocessing}")
         self.background_removal_kwargs = kwargs
         print(f"Background removal method set: {preprocessing.value}")
 
@@ -72,28 +80,16 @@ class BackgroundRemovalImageRetrievalSystem:
         
         processed_count = 0
         for image_id, image, info, relationship in dataset.iterate_images():
-            # Apply background removal to get the mask
-            predicted_mask = self.background_removal_function(image, **self.background_removal_kwargs)
+            # Apply background removal to get both mask and processed image
+            predicted_mask, processed_image = self.background_removal_function(image, **self.background_removal_kwargs)
             
             # Store the predicted mask for evaluation (query only)
             if dataset_type == "query":
                 self.predicted_masks[image_id] = predicted_mask
             
-            # Apply the mask to the original image to create background-removed image
-            if len(predicted_mask.shape) == 2:  # Binary mask
-                # Convert mask to 3-channel for broadcasting
-                mask_3d = np.stack([predicted_mask] * 3, axis=2)
-                # Normalize mask to 0-1 range
-                mask_normalized = mask_3d.astype(np.float32) / 255.0
-                # Apply mask to original image
-                background_removed_image = (image.astype(np.float32) * mask_normalized).astype(np.uint8)
-            else:
-                # If mask is already 3-channel, use it directly
-                background_removed_image = predicted_mask
-            
-            # Update the dataset with background-removed image
+            # Update the dataset with processed image
             if image_id in dataset.data:
-                dataset.data[image_id]["image"] = background_removed_image
+                dataset.data[image_id]["image"] = processed_image
                 processed_count += 1
         
         print(f"Background removal applied to {processed_count} {dataset_type} images")
@@ -248,8 +244,31 @@ class BackgroundRemovalImageRetrievalSystem:
                 json.dump(bg_removal_metrics, f, indent=2)
             print(f"Background removal metrics saved to: {bg_filepath}")
         
+        # Save masks as PNG files for test datasets (QST2_W2)
+        if dataset_name in ["QST2_W2"] and self.predicted_masks:
+            self.save_masks_as_png(results_dir)
+        
         print(f"Results saved to: {pkl_filepath}")
         return pkl_filepath
+
+    def save_masks_as_png(self, results_dir: str) -> None:
+        """Save predicted masks as PNG files for test datasets."""
+        if not self.predicted_masks:
+            print("No predicted masks available to save")
+            return
+        
+        saved_count = 0
+        for image_id, mask in self.predicted_masks.items():
+            # Create filename with zero-padded ID
+            filename = f"{image_id:05d}.png"
+            mask_path = os.path.join(results_dir, filename)
+            
+            # Save mask as PNG
+            import cv2
+            cv2.imwrite(mask_path, mask)
+            saved_count += 1
+        
+        print(f"Saved {saved_count} mask files to: {results_dir}")
 
     def run(
         self,
@@ -261,57 +280,67 @@ class BackgroundRemovalImageRetrievalSystem:
         save_results: bool = True,
         evaluate_bg_removal: bool = True,
         bins: int = 256,
-        preprocessing: PreprocessingMethod = PreprocessingMethod.BG_RECTANGLES,
+        background_remover: PreprocessingMethod = PreprocessingMethod.NONE,
+        preprocessing: PreprocessingMethod = PreprocessingMethod.NONE,
         ns_blocks: List[int] = None,
         max_level: int = 2,
-        **preprocessing_kwargs
+        **background_removal_kwargs
     ) -> Dict[str, float]:
         """
         Run the complete background removal + image retrieval pipeline.
         """
                 
-        # Set background removal method from preprocessing
-        self.set_background_removal_method(preprocessing, **preprocessing_kwargs)
+        # Set background removal method
+        self.set_background_removal_method(background_remover, **background_removal_kwargs)
         
         self.index_dataset.load_dataset(index_dataset)
         self.query_dataset.load_dataset(query_dataset)
         
-        self.load_ground_truth()
+        # Only load ground truth if the dataset has it
+        if self.query_dataset.has_ground_truth():
+            self.load_ground_truth()
         
-        # Apply background removal to both query and index datasets
+        # Apply background removal only to query dataset (BBDD images are already clean paintings)
         self.background_removal_preprocess_images("query")
-        self.background_removal_preprocess_images("index")
         
         self.compute_descriptors(
             method, 
             bins, 
-            PreprocessingMethod.NONE,  # No additional preprocessing since we already did background removal
+            preprocessing,  # Apply specified preprocessing to background-removed images
             ns_blocks=ns_blocks,
             max_level=max_level
         )
         
         predictions = self.retrieve_similar_images(measure, k=10)
         
-        print("\n📊 Evaluating retrieval performance...")
-        retrieval_metrics = self.evaluate_retrieval_performance(predictions)
+        # Only evaluate if we have ground truth
+        retrieval_metrics = {}
+        if self.ground_truth:
+            print("\nEvaluating retrieval performance...")
+            retrieval_metrics = self.evaluate_retrieval_performance(predictions)
+        else:
+            print("\nNo ground truth available - skipping retrieval evaluation")
         
         bg_removal_metrics = {}
-        if evaluate_bg_removal:
-            print("\n🎯 Evaluating background removal quality...")
+        if evaluate_bg_removal and self.predicted_masks:
+            print("\nEvaluating background removal quality...")
             bg_removal_metrics = self.evaluate_background_removal_quality()
         
         # Save results
         if save_results:
+            # Determine dataset name for saving
+            dataset_name = query_dataset.value.upper() if hasattr(query_dataset, 'value') else "UNKNOWN"
             self.save_results(
                 predictions, 
                 method, 
                 week_folder,
                 retrieval_metrics,
-                bg_removal_metrics
+                bg_removal_metrics,
+                dataset_name
             )
         
         # Combine all metrics
         all_metrics = {**retrieval_metrics, **bg_removal_metrics}
         
-        print("\n✅ Pipeline completed successfully!")
+        print("\nPipeline completed successfully!")
         return all_metrics
