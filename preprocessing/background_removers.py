@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 np.set_printoptions(precision=2)
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 from enum import Enum
 
 
@@ -116,7 +117,14 @@ def remove_background_by_kmeans(img: np.ndarray, k: int = 5, margin: int = 45):
 
     plt.show()
 
-def remove_background_by_rectangles(img: np.ndarray, offset: int, visualise: bool = False):
+def remove_background_by_rectangles(
+        img: np.ndarray,
+        offset: int = 40,
+        h_delta: int = 20,
+        s_delta: int = 60,
+        v_delta:int = 60,
+        visualise: bool = False,
+    ):
     # convert to hsv
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
@@ -134,7 +142,6 @@ def remove_background_by_rectangles(img: np.ndarray, offset: int, visualise: boo
     mean_background = np.mean([mean_top, mean_bottom, mean_left, mean_right], axis=0)
 
     # define thresholds
-    h_delta, s_delta, v_delta = 20, 60, 60
     lower_bound = np.array([
         max(mean_background[0] - h_delta, 0),
         max(mean_background[1] - s_delta, 0),
@@ -148,6 +155,7 @@ def remove_background_by_rectangles(img: np.ndarray, offset: int, visualise: boo
     ], dtype=np.uint8)
     mask = cv2.inRange(hsv, lower_bound, upper_bound)
 
+    print(f"Mean background colour is {mean_background}.\nLower bound is {lower_bound}.\nUpper bound is {upper_bound}.")
 
     # background suppression stronger near edges, weaker near center
     y, x = np.indices((h, w))
@@ -164,30 +172,60 @@ def remove_background_by_rectangles(img: np.ndarray, offset: int, visualise: boo
     result_hsv = cv2.bitwise_and(hsv, hsv, mask=mask_inv)
     result_bgr = cv2.cvtColor(result_hsv, cv2.COLOR_HSV2BGR)
 
-
     result_bgr = cv2.cvtColor(result_hsv, cv2.COLOR_HSV2BGR)
     if visualise:
-        plt.figure(figsize=(12, 6))
+        plt.figure(figsize=(20, 6))
+        plt.subplot(1, 5, 1)
 
-        plt.subplot(1, 3, 1)
+        # original image
         plt.title("Original")
         plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
         plt.axis('off')
+        ax = plt.gca()
+        # top
+        ax.add_patch(Rectangle((0, 0), w, offset, linewidth=2, edgecolor='red', facecolor='red', alpha=0.3, label='Top'))
+        # bottom
+        ax.add_patch(Rectangle((0, h-offset), w, offset, linewidth=2, edgecolor='blue', facecolor='blue', alpha=0.3, label='Bottom'))
+        # left
+        ax.add_patch(Rectangle((0, 0), offset, h, linewidth=2, edgecolor='green', facecolor='green', alpha=0.3, label='Left'))
+        # right
+        ax.add_patch(Rectangle((w-offset, 0), offset, h, linewidth=2, edgecolor='yellow', facecolor='yellow', alpha=0.3, label='Right'))
+        ax.legend(loc='lower right')
 
-        plt.subplot(1, 3, 2)
+        # mean colours
+        plt.subplot(1, 5, 2)
+        plt.title("Mean colours")
+        mean_colors_hsv = np.array([mean_top, mean_bottom, mean_left, mean_right, mean_background], dtype=np.uint8).reshape(1, 5, 3)
+        mean_colors_bgr = cv2.cvtColor(mean_colors_hsv, cv2.COLOR_HSV2BGR)
+        mean_colors_rgb = cv2.cvtColor(mean_colors_bgr, cv2.COLOR_BGR2RGB)
+        plt.imshow(mean_colors_rgb)
+        plt.xticks(range(5), ['Top', 'Bottom', 'Left', 'Right', 'Average'], rotation=45)
+        plt.yticks([])
+        plt.axis('on')
+
+        # weighted distance
+        plt.subplot(1, 5, 3)
+        plt.title("Weighted distance to edge")
+        plt.imshow(weight, cmap='viridis')
+        plt.colorbar(label='Wegithed distance to edge')
+        plt.axis('off')
+
+        # final mask
+        plt.subplot(1, 5, 4)
         plt.title("Mask")
         plt.imshow(mask_inv, cmap='gray')
         plt.axis('off')
 
-        plt.subplot(1, 3, 3)
+        # result
+        plt.subplot(1, 5, 5)
         plt.title("Result")
         plt.imshow(cv2.cvtColor(result_bgr, cv2.COLOR_BGR2RGB))
         plt.axis('off')
 
+        plt.tight_layout()
         plt.show()
 
     return mask_inv
-
 
 
 if __name__ == "__main__":
@@ -202,5 +240,5 @@ if __name__ == "__main__":
         if remover == "kmeans":
             mask = remove_background_by_kmeans(img)
         elif remover == "rectangles":
-            mask = remove_background_by_rectangles(img, offset=50, visualise=True)
+            mask = remove_background_by_rectangles(img, offset=40, h_delta=20, s_delta=60, v_delta=60, visualise=True)
     print("Temps total:", time.time() - init_time)
