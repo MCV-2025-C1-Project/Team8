@@ -75,7 +75,7 @@ class DescriptorMethod(Enum):
         elif self.is_3d_histogram:
             # computation in-place (gets regular rgb, lab or hsv histogram and
             # rearranges its 3 concatenated histograms into a 3D histogram)
-            return three_d_histogram(img)
+            return three_d_histogram(img, bins)
 
         elif self.is_block_histogram:
             if ns_blocks is None:
