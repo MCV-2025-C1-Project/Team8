@@ -299,6 +299,10 @@ class BackgroundRemovalImageRetrievalSystem:
         # Set background removal method
         self.set_background_removal_method(background_remover, **background_removal_kwargs)
         
+        # Clear previous state
+        self.ground_truth = []
+        self.predicted_masks = {}
+        
         self.index_dataset.load_dataset(index_dataset)
         self.query_dataset.load_dataset(query_dataset)
         
