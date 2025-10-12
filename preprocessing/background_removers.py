@@ -21,6 +21,47 @@ def get_background_removal_function(method: BackgroundRemovalMethod):
     else:
         raise ValueError(f"Unknown background removal method: {method}")
 
+def remove_black_margins(mask_255: np.ndarray, processed_img: np.ndarray):
+    # Iteratively strip fully-black rows/columns at the image edges (connected to margins)
+    # mask_255: 0 for background, 255 for object
+    while True:
+        h, w = mask_255.shape[:2]
+        if h == 0 or w == 0:
+            break
+        removed = False
+
+        # top row
+        if np.all(mask_255[0, :] == 0):
+            mask_255 = mask_255[1:, :]
+            processed_img = processed_img[1:, :, :]
+            removed = True
+            continue
+
+        # bottom row
+        if np.all(mask_255[-1, :] == 0):
+            mask_255 = mask_255[:-1, :]
+            processed_img = processed_img[:-1, :, :]
+            removed = True
+            continue
+
+        # left column
+        if np.all(mask_255[:, 0] == 0):
+            mask_255 = mask_255[:, 1:]
+            processed_img = processed_img[:, 1:, :]
+            removed = True
+            continue
+
+        # right column
+        if np.all(mask_255[:, -1] == 0):
+            mask_255 = mask_255[:, :-1]
+            processed_img = processed_img[:, :-1, :]
+            removed = True
+            continue
+
+        if not removed:
+            break
+    return processed_img
+    
 
 def remove_background_by_kmeans(img: np.ndarray, k: int = 5, margin: int = 45, visualise: bool = True):
     h, w = img.shape[:2]
@@ -122,6 +163,9 @@ def remove_background_by_kmeans(img: np.ndarray, k: int = 5, margin: int = 45, v
     
     # Apply mask to original image to create processed image
     processed_img = cv2.bitwise_and(img, img, mask=mask_255)
+
+    # Remove black margins from processed image
+    processed_img = remove_black_margins(mask_255, processed_img)
     
     return mask_255, processed_img
 
@@ -230,6 +274,9 @@ def remove_background_by_rectangles(
 
         plt.tight_layout()
         plt.show()
+    
+    # Remove black margins from result image
+    result_bgr = remove_black_margins(mask_inv, result_bgr)
 
     return mask_inv, result_bgr
 

@@ -70,7 +70,7 @@ def main():
         bins=32,
         background_remover=PreprocessingMethod.BG_KMEANS,
         preprocessing=PreprocessingMethod.HIST_EQ,
-        ns_blocks=[1, 2, 3],
+        ns_blocks=[4, 6],
         visualise=False
     )
     
@@ -122,7 +122,7 @@ def main():
         bins=32,
         background_remover=PreprocessingMethod.BG_KMEANS,
         preprocessing=PreprocessingMethod.HIST_EQ,
-        ns_blocks=[1, 2, 3],
+        ns_blocks=[4, 6],
         visualise=False
     )
 
