@@ -46,7 +46,7 @@ def main():
     )
     # HSV 3D HISTOGRAM
     print("\nMETHOD 3: HSV 3D Histogram")
-    hsv_block_results = retrieval_system.run(
+    hsv_3d_results = retrieval_system.run(
         method=DescriptorMethod.HSV_3D,
         measure=SimilarityMeasure.HIST_INTERSECT,
         index_dataset=DatasetType.BBDD,
@@ -62,6 +62,8 @@ def main():
     print("-" * 30)
     print(f"HSV:         mAP@1={hsv_results.get('mAP@1', float('nan')):.3f}, mAP@5={hsv_results.get('mAP@5', float('nan')):.3f}")
     print(f"HSV_BLOCKS:  mAP@1={hsv_block_results.get('mAP@1', float('nan')):.3f}, mAP@5={hsv_block_results.get('mAP@5', float('nan')):.3f}")
+    print(f"HSV_3D:  mAP@1={hsv_3d_results.get('mAP@1', float('nan')):.3f}, mAP@5={hsv_3d_results.get('mAP@5', float('nan')):.3f}")
+
 
     print("\n" + "=" * 60)
     print("VALIDATION PHASE 2: BACKGROUND REMOVAL + IMAGE RETRIEVAL (QSD2_W2)")
