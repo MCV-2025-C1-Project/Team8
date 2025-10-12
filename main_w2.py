@@ -44,18 +44,18 @@ def main():
         bins=32,
         preprocessing=PreprocessingMethod.HIST_EQ,
     )
-    # HSV 3D HISTOGRAM (commented out due to high execution time at around 40 min)
-    # print("\nMETHOD 3: HSV 3D Histogram")
-    # hsv_block_results = retrieval_system.run(
-    #     method=DescriptorMethod.HSV_3D,
-    #     measure=SimilarityMeasure.HIST_INTERSECT,
-    #     index_dataset=DatasetType.BBDD,
-    #     query_dataset=DatasetType.QSD1_W1,
-    #     week_folder=WeekFolder.WEEK_2,
-    #     save_results=True,
-    #     bins=32,
-    #     preprocessing=PreprocessingMethod.HIST_EQ,
-    # )
+    # HSV 3D HISTOGRAM
+    print("\nMETHOD 3: HSV 3D Histogram")
+    hsv_block_results = retrieval_system.run(
+        method=DescriptorMethod.HSV_3D,
+        measure=SimilarityMeasure.HIST_INTERSECT,
+        index_dataset=DatasetType.BBDD,
+        query_dataset=DatasetType.QSD1_W1,
+        week_folder=WeekFolder.WEEK_2,
+        save_results=True,
+        bins=16,
+        preprocessing=PreprocessingMethod.HIST_EQ,
+    )
     
 
     print("\nVALIDATION RESULTS (QSD1_W1)")
