@@ -22,10 +22,9 @@ def get_background_removal_function(method: BackgroundRemovalMethod):
         raise ValueError(f"Unknown background removal method: {method}")
 
 
-def remove_background_by_kmeans(img: np.ndarray, k: int = 5, margin: int = 45):
+def remove_background_by_kmeans(img: np.ndarray, k: int = 5, margin: int = 45, visualise: bool = True):
     h, w = img.shape[:2]
-    img_blurred = cv2.GaussianBlur(img, (7, 7), 0)
-    img_lab = cv2.cvtColor(img_blurred, cv2.COLOR_BGR2Lab)
+    img_lab = cv2.cvtColor(img, cv2.COLOR_BGR2Lab)
 
     # --- K-MEANS ---
     pixels = img_lab.reshape((-1, 3)).astype(np.float32)
@@ -68,54 +67,55 @@ def remove_background_by_kmeans(img: np.ndarray, k: int = 5, margin: int = 45):
     cv2.floodFill(mask, None, (w//2, h//2), 1)
     mask[mask == 2] = 0
 
-    # --- PLOT ---
-    plt.figure(figsize=(24,6))
+    if visualise:
+        # --- PLOT ---
+        plt.figure(figsize=(24,6))
 
-    original_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    plt.subplot(1,4,1)
-    plt.imshow(original_rgb)
-    plt.title("Original Image")
-    plt.axis("off")
+        original_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        plt.subplot(1,4,1)
+        plt.imshow(original_rgb)
+        plt.title("Original Image")
+        plt.axis("off")
 
-    # Add margin lines
-    plt.plot([0, w], [margin, margin], 'r--')  # top line
-    plt.plot([0, w], [h-margin, h-margin], 'r--')  # bottom line
-    plt.plot([margin, margin], [0, h], 'r--')  # left line
-    plt.plot([w-margin, w-margin], [0, h], 'r--')  # right line
+        # Add margin lines
+        plt.plot([0, w], [margin, margin], 'r--')  # top line
+        plt.plot([0, w], [h-margin, h-margin], 'r--')  # bottom line
+        plt.plot([margin, margin], [0, h], 'r--')  # left line
+        plt.plot([w-margin, w-margin], [0, h], 'r--')  # right line
 
-    palette = np.array([
-        [255, 0, 0],      # red
-        [0, 255, 0],      # green
-        [0, 0, 255],      # blue
-        [255, 255, 0],    # yellow
-        [255, 0, 255],    # magenta
-        [0, 255, 255],    # cyan
-        [255, 128, 0],    # orange
-        [128, 0, 255],    # purple
-        [128, 128, 128],  # gray
-        [0, 128, 128],    # teal
-    ], dtype=np.uint8)
-    colored_clusters = palette[labels]
-    plt.subplot(1,4,2)
-    plt.imshow(colored_clusters)
-    plt.title(f"Clusters K-Means (k={k})")
-    plt.axis("off")
+        palette = np.array([
+            [255, 0, 0],      # red
+            [0, 255, 0],      # green
+            [0, 0, 255],      # blue
+            [255, 255, 0],    # yellow
+            [255, 0, 255],    # magenta
+            [0, 255, 255],    # cyan
+            [255, 128, 0],    # orange
+            [128, 0, 255],    # purple
+            [128, 128, 128],  # gray
+            [0, 128, 128],    # teal
+        ], dtype=np.uint8)
+        colored_clusters = palette[labels]
+        plt.subplot(1,4,2)
+        plt.imshow(colored_clusters)
+        plt.title(f"Clusters K-Means (k={k})")
+        plt.axis("off")
 
-    plt.subplot(1,4,3)
-    plt.imshow(mask, cmap='gray')
-    plt.title("Binary Mask: 1 = object, 0 = background")
-    plt.axis("off")
+        plt.subplot(1,4,3)
+        plt.imshow(mask, cmap='gray')
+        plt.title("Binary Mask: 1 = object, 0 = background")
+        plt.axis("off")
 
-    # Apply mask to original image
-    masked_img = original_rgb.copy()
-    masked_img[mask == 0] = 0
+        # Apply mask to original image
+        masked_img = original_rgb.copy()
+        masked_img[mask == 0] = 0
 
-    plt.subplot(1,4,4)
-    plt.imshow(masked_img)
-    plt.title("Image with Mask Applied")
-    plt.axis("off")
+        plt.subplot(1,4,4)
+        plt.imshow(masked_img)
+        plt.title("Image with Mask Applied")
+        plt.axis("off")
 
-    plt.show()
+        plt.show()
     
     # Convert mask to 0-255 range for consistency
     mask_255 = (mask * 255).astype(np.uint8)
@@ -235,7 +235,7 @@ def remove_background_by_rectangles(
 
 
 if __name__ == "__main__":
-    remover = "rectangles"
+    remover = "kmeans"  # "kmeans" or "rectangles"
 
     import glob
     path = "data/qsd2_w2/"
@@ -244,7 +244,7 @@ if __name__ == "__main__":
     for image_path in glob.glob(f"{path}*.jpg"):
         img = cv2.imread(image_path)
         if remover == "kmeans":
-            mask = remove_background_by_kmeans(img)
+            remove_background_by_kmeans(img, visualise=True)
         elif remover == "rectangles":
-            mask = remove_background_by_rectangles(img, offset=40, h_delta=20, s_delta=60, v_delta=60, visualise=True)
+            remove_background_by_rectangles(img, offset=40, h_delta=20, s_delta=60, v_delta=60, visualise=True)
     print("Temps total:", time.time() - init_time)

@@ -35,7 +35,7 @@ def main():
     print("\nMETHOD 2: HSV Block Histogram")
     hsv_block_results = retrieval_system.run(
         method=DescriptorMethod.HSV_BLOCKS,
-        ns_blocks=[1, 2, 4],  # Better spatial coverage: 1+4+16=21 blocks
+        ns_blocks=[4, 6],  # Better spatial coverage: 1+4+16=21 blocks
         measure=SimilarityMeasure.HIST_INTERSECT,
         index_dataset=DatasetType.BBDD,
         query_dataset=DatasetType.QSD1_W1,
@@ -73,8 +73,24 @@ def main():
     bg_retrieval_system = BackgroundRemovalImageRetrievalSystem()
 
     print("\nProcessing QSD2_W2 with background removal...")
+    
+    print("\nMETHOD 1: HSV Block Histogram with K-Means Background Removal")
+    k_means_results = bg_retrieval_system.run(
+        method=DescriptorMethod.HSV_BLOCKS,
+        measure=SimilarityMeasure.HIST_INTERSECT,
+        index_dataset=DatasetType.BBDD,
+        query_dataset=DatasetType.QSD2_W2,
+        week_folder=WeekFolder.WEEK_2,
+        save_results=True,
+        evaluate_bg_removal=True,
+        bins=32,
+        background_remover=PreprocessingMethod.BG_KMEANS,
+        preprocessing=PreprocessingMethod.HIST_EQ,
+        visualise=False
+    )
 
-    combined_results = bg_retrieval_system.run(
+    print("\nMETHOD 2: HSV Block Histogram with Rectangle Background Removal")
+    rectangle_results = bg_retrieval_system.run(
         method=DescriptorMethod.HSV_BLOCKS,
         measure=SimilarityMeasure.HIST_INTERSECT,
         index_dataset=DatasetType.BBDD,
@@ -93,17 +109,25 @@ def main():
     print("-" * 30)
     
     # Display retrieval results
-    if 'mAP@1' in combined_results and 'mAP@5' in combined_results:
-        print(f"RETRIEVAL PERFORMANCE:")
-        print(f"  mAP@1: {combined_results['mAP@1']:.3f}")
-        print(f"  mAP@5: {combined_results['mAP@5']:.3f}")
+    if 'mAP@1' in k_means_results and 'mAP@5' in k_means_results:
+        print(f"K-Means RETRIEVAL PERFORMANCE:")
+        print(f"  mAP@1: {k_means_results['mAP@1']:.3f}")
+        print(f"  mAP@5: {k_means_results['mAP@5']:.3f}")
+    if 'precision' in k_means_results and 'recall' in k_means_results and 'f1' in k_means_results:
+        print(f"\nK-Means BACKGROUND REMOVAL QUALITY:")
+        print(f"  Precision: {k_means_results['precision']:.3f}")
+        print(f"  Recall:    {k_means_results['recall']:.3f}")
+        print(f"  F1-Score:  {k_means_results['f1']:.3f}")
     
-    # Display background removal results
-    if 'precision' in combined_results and 'recall' in combined_results and 'f1' in combined_results:
-        print(f"\nBACKGROUND REMOVAL QUALITY:")
-        print(f"  Precision: {combined_results['precision']:.3f}")
-        print(f"  Recall:    {combined_results['recall']:.3f}")
-        print(f"  F1-Score:  {combined_results['f1']:.3f}")
+    if 'mAP@1' in rectangle_results and 'mAP@5' in rectangle_results:
+        print(f"\nRECTANGLE RETRIEVAL PERFORMANCE:")
+        print(f"  mAP@1: {rectangle_results['mAP@1']:.3f}")
+        print(f"  mAP@5: {rectangle_results['mAP@5']:.3f}")
+    if 'precision' in rectangle_results and 'recall' in rectangle_results and 'f1' in rectangle_results:
+        print(f"\nRECTANGLE BACKGROUND REMOVAL QUALITY:")
+        print(f"  Precision: {rectangle_results['precision']:.3f}")
+        print(f"  Recall:    {rectangle_results['recall']:.3f}")
+        print(f"  F1-Score:  {rectangle_results['f1']:.3f}")
 
     print("\n" + "=" * 60)
     print("TEST PHASE: IMAGE RETRIEVAL ON TEST DATASETS")
@@ -136,9 +160,8 @@ def main():
         save_results=True,
         evaluate_bg_removal=False,  # No ground truth for evaluation
         bins=32,
-        background_remover=PreprocessingMethod.BG_RECTANGLES,
+        background_remover=PreprocessingMethod.BG_KMEANS,
         preprocessing=PreprocessingMethod.HIST_EQ,
-        offset=50,
         visualise=False
     )
 
