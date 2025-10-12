@@ -57,8 +57,6 @@ def main():
 
     # Initialize combined system
     bg_retrieval_system = BackgroundRemovalImageRetrievalSystem()
-
-    print("\nProcessing QSD2_W2 with background removal...")
     
     print("\nMETHOD 1: HSV Block Histogram with K-Means Background Removal")
     k_means_results = bg_retrieval_system.run(
@@ -72,25 +70,10 @@ def main():
         bins=32,
         background_remover=PreprocessingMethod.BG_KMEANS,
         preprocessing=PreprocessingMethod.HIST_EQ,
+        ns_blocks=[1, 2, 3],
         visualise=False
     )
-
-    print("\nMETHOD 2: HSV Block Histogram with Rectangle Background Removal")
-    rectangle_results = bg_retrieval_system.run(
-        method=DescriptorMethod.HSV_BLOCKS,
-        measure=SimilarityMeasure.HIST_INTERSECT,
-        index_dataset=DatasetType.BBDD,
-        query_dataset=DatasetType.QSD2_W2,
-        week_folder=WeekFolder.WEEK_2,
-        save_results=True,
-        evaluate_bg_removal=True,
-        bins=32,  
-        background_remover=PreprocessingMethod.BG_RECTANGLES, 
-        preprocessing=PreprocessingMethod.HIST_EQ,  
-        offset=50,
-        visualise=False
-    )
-
+    
     print("\nVALIDATION RESULTS (QSD2_W2)")
     print("-" * 30)
     
@@ -105,15 +88,6 @@ def main():
         print(f"  Recall:    {k_means_results['recall']:.3f}")
         print(f"  F1-Score:  {k_means_results['f1']:.3f}")
     
-    if 'mAP@1' in rectangle_results and 'mAP@5' in rectangle_results:
-        print(f"\nRECTANGLE RETRIEVAL PERFORMANCE:")
-        print(f"  mAP@1: {rectangle_results['mAP@1']:.3f}")
-        print(f"  mAP@5: {rectangle_results['mAP@5']:.3f}")
-    if 'precision' in rectangle_results and 'recall' in rectangle_results and 'f1' in rectangle_results:
-        print(f"\nRECTANGLE BACKGROUND REMOVAL QUALITY:")
-        print(f"  Precision: {rectangle_results['precision']:.3f}")
-        print(f"  Recall:    {rectangle_results['recall']:.3f}")
-        print(f"  F1-Score:  {rectangle_results['f1']:.3f}")
 
     print("\n" + "=" * 60)
     print("TEST PHASE: IMAGE RETRIEVAL ON TEST DATASETS")
@@ -122,7 +96,7 @@ def main():
     print("\nTEST 1: QST1_W2 (NO BACKGROUND REMOVAL)")
     print("-" * 40)
     
-    qst1_results = retrieval_system.run(
+    retrieval_system.run(
         method=DescriptorMethod.HSV_BLOCKS,
         measure=SimilarityMeasure.HIST_INTERSECT,
         index_dataset=DatasetType.BBDD,
@@ -130,14 +104,14 @@ def main():
         week_folder=WeekFolder.WEEK_2,
         save_results=True,
         bins=32,
+        ns_blocks=[4, 6],
         preprocessing=PreprocessingMethod.HIST_EQ,
-        ns_blocks=[1, 2, 4]
     )
 
     print("\nTEST 2: QST2_W2 (WITH BACKGROUND REMOVAL)")
     print("-" * 40)
     
-    qst2_results = bg_retrieval_system.run(
+    bg_retrieval_system.run(
         method=DescriptorMethod.HSV_BLOCKS,
         measure=SimilarityMeasure.HIST_INTERSECT,
         index_dataset=DatasetType.BBDD,
@@ -148,6 +122,7 @@ def main():
         bins=32,
         background_remover=PreprocessingMethod.BG_KMEANS,
         preprocessing=PreprocessingMethod.HIST_EQ,
+        ns_blocks=[1, 2, 3],
         visualise=False
     )
 

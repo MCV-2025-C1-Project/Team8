@@ -36,6 +36,7 @@ class DataLoader:
     def has_ground_truth(self) -> bool:
         if self.dataset_type is None:
             return False
+        # Only validation datasets have ground truth, test datasets (QST*) do not
         return self.dataset_type in [DatasetType.BBDD, DatasetType.QSD1_W1, DatasetType.QSD2_W2]
 
     def load_dataset(self, dataset: DatasetType) -> None:

@@ -39,6 +39,7 @@ class BackgroundRemovalImageRetrievalSystem:
         self.query_descriptors: Dict[int, np.ndarray] = {}
         self.ground_truth: List[List[int]] = []
         self.background_removal_function: Optional[Callable] = None
+        self.background_removal_method: Optional[str] = None
         self.background_removal_kwargs: Dict = {}
         self.predicted_masks: Dict[int, np.ndarray] = {}  # Store predicted masks
 
@@ -56,12 +57,13 @@ class BackgroundRemovalImageRetrievalSystem:
         # Store the preprocessing method and get the actual function
         if preprocessing == PreprocessingMethod.BG_KMEANS:
             self.background_removal_function = remove_background_by_kmeans
+            self.background_removal_method = "kmeans"
         elif preprocessing == PreprocessingMethod.BG_RECTANGLES:
             self.background_removal_function = remove_background_by_rectangles
+            self.background_removal_method = "rectangles"
         else:
             raise ValueError(f"Unknown background removal method: {preprocessing}")
         self.background_removal_kwargs = kwargs
-        print(f"Background removal method set: {preprocessing.value}")
 
     def background_removal_preprocess_images(self, dataset_type: str = "query") -> None:
         """
@@ -223,7 +225,11 @@ class BackgroundRemovalImageRetrievalSystem:
     ) -> str:
         """Save results to files."""
         
-        method_name = f"method_{method.value}_bg_removal"
+        # Create method name including background removal method
+        if self.background_removal_method:
+            method_name = f"method_{method.value}_{self.background_removal_method}"
+        else:
+            method_name = f"method_{method.value}_bg_removal"
         results_dir = os.path.join("results", week_folder.value, dataset_name, method_name)
         os.makedirs(results_dir, exist_ok=True)
         
@@ -342,5 +348,4 @@ class BackgroundRemovalImageRetrievalSystem:
         # Combine all metrics
         all_metrics = {**retrieval_metrics, **bg_removal_metrics}
         
-        print("\nPipeline completed successfully!")
         return all_metrics

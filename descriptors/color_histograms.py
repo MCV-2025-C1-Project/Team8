@@ -30,7 +30,12 @@ def histogram_grayscale(img: np.ndarray, bins: int = 256) -> np.ndarray:
 
     # Normalize
     histogram = hist.flatten().astype(np.float32)
-    histogram /= np.sum(histogram)
+    histogram_sum = np.sum(histogram)
+    if histogram_sum > 0:
+        histogram /= histogram_sum
+    else:
+        # If histogram is empty (all zeros), return uniform distribution
+        histogram = np.ones_like(histogram) / len(histogram)
     return histogram
 
 
@@ -62,7 +67,12 @@ def histogram_rgb(img: np.ndarray, bins: int = 256) -> np.ndarray:
 
     # Concatenate and normalize
     histogram = np.concatenate([r_hist.flatten(), g_hist.flatten(), b_hist.flatten()]).astype(np.float32)
-    histogram /= np.sum(histogram)
+    histogram_sum = np.sum(histogram)
+    if histogram_sum > 0:
+        histogram /= histogram_sum
+    else:
+        # If histogram is empty (all zeros), return uniform distribution
+        histogram = np.ones_like(histogram) / len(histogram)
     return histogram
 
 
@@ -97,7 +107,12 @@ def histogram_lab(img: np.ndarray, bins: int = 256) -> np.ndarray:
 
     # Concatenate and normalize
     histogram = np.concatenate([l_hist.flatten(), a_hist.flatten(), b_hist.flatten()]).astype(np.float32)
-    histogram /= np.sum(histogram)
+    histogram_sum = np.sum(histogram)
+    if histogram_sum > 0:
+        histogram /= histogram_sum
+    else:
+        # If histogram is empty (all zeros), return uniform distribution
+        histogram = np.ones_like(histogram) / len(histogram)
     return histogram
 
 
@@ -127,5 +142,10 @@ def histogram_hsv(img: np.ndarray, bins: int = 256) -> np.ndarray:
     c = cv2.calcHist([hsv_img], [2], mask, [bins], [0, 256])
 
     histogram = np.concatenate([a.flatten(), b.flatten(), c.flatten()]).astype(np.float32)
-    histogram /= np.sum(histogram)
+    histogram_sum = np.sum(histogram)
+    if histogram_sum > 0:
+        histogram /= histogram_sum
+    else:
+        # If histogram is empty (all zeros), return uniform distribution
+        histogram = np.ones_like(histogram) / len(histogram)
     return histogram

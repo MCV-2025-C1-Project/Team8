@@ -30,21 +30,10 @@ python main_w1.py
 ```
 
 **What it does:**
-- Tests basic image retrieval on QSD1_W1 → BBDD
-- Uses LAB and HSV color histograms
-- Applies histogram equalization preprocessing
+- Tests LAB and HSV color histograms on QSD1_W1 → BBDD (validation)
+- Tests LAB and HSV color histograms on QST1_W1 → BBDD (test)
+- Uses gamma correction for LAB, histogram equalization for HSV
 - Saves results to `results/week_1/`
-
-**Expected Output:**
-```
-🔎 IMAGE RETRIEVAL SYSTEM - WEEK 1
-==================================================
-✨ METHOD 1: LAB Histogram
-✨ METHOD 2: HSV Histogram
-✅ VALIDATION RESULTS
-LAB:         mAP@1=0.XXX, mAP@5=0.XXX
-HSV:         mAP@1=0.XXX, mAP@5=0.XXX
-```
 
 ### Week 2 - Advanced Image Retrieval with Background Removal
 ```bash
@@ -52,42 +41,9 @@ python main_w2.py
 ```
 
 **What it does:**
-1. **Validation Phase**: Tests HSV and HSV Block Histograms on QSD1_W1 → BBDD
-2. **Background Removal Phase**: Tests complete pipeline on QSD2_W2 → BBDD with background removal
-
-**Expected Output:**
-```
-🔎 IMAGE RETRIEVAL SYSTEM - WEEK 2
-==================================================
-📊 VALIDATION PHASE (QSD1_W1)
-✨ METHOD 1: HSV Histogram
-✨ METHOD 2: HSV Block Histogram
-✅ VALIDATION RESULTS
-HSV:         mAP@1=0.XXX, mAP@5=0.XXX
-HSV_BLOCKS:  mAP@1=0.XXX, mAP@5=0.XXX
-
-🎭 BACKGROUND REMOVAL + IMAGE RETRIEVAL SYSTEM
-==================================================
-🔧 QSD2_W2 BACKGROUND REMOVAL + RETRIEVAL PIPELINE
-🚀 Starting Background Removal + Image Retrieval Pipeline
-📁 Loading datasets...
-🎭 Applying background removal...
-🔍 Computing descriptors...
-🔎 Performing image retrieval...
-📊 Evaluating retrieval performance...
-🎯 Evaluating background removal quality...
-💾 Saving results...
-✅ Pipeline completed successfully!
-
-📊 COMBINED RESULTS
-🔍 RETRIEVAL PERFORMANCE:
-  mAP@1: 0.XXX
-  mAP@5: 0.XXX
-🎭 BACKGROUND REMOVAL QUALITY:
-  Precision: 0.XXX
-  Recall:    0.XXX
-  F1-Score:  0.XXX
-```
+1. **Validation Phase 1**: Tests HSV and HSV Block Histograms on QSD1_W1 → BBDD
+2. **Validation Phase 2**: Tests K-Means background removal + HSV Block Histograms on QSD2_W2 → BBDD
+3. **Test Phase**: Tests HSV Block Histograms on QST1_W2 and QST2_W2 (with background removal)
 
 ## 📁 Project Structure
 
@@ -142,36 +98,38 @@ Results are saved in the following structure:
 ```
 results/
 ├── week_1/
-│   └── QSD1_W1/
-│       ├── method1/              # LAB histogram
-│       │   ├── result.pkl
-│       │   └── metrics.json
-│       └── method2/              # HSV histogram
-│           ├── result.pkl
-│           └── metrics.json
+│   ├── QSD1_W1/                  # Validation results
+│   │   ├── method_lab/
+│   │   └── method_hsv/
+│   └── QST1_W1/                  # Test results
+│       ├── method_lab/
+│       └── method_hsv/
 └── week_2/
     ├── QSD1_W1/                  # Validation results
     │   ├── method_hsv/
     │   └── method_hsv_blocks/
-    └── QSD2_W2/                  # Background removal results
-        └── method_hsv_bg_removal/
+    ├── QSD2_W2/                  # Background removal results
+    │   └── method_hsv_blocks_kmeans/
+    ├── QST1_W2/                  # Test results
+    │   └── method_hsv_blocks/
+    └── QST2_W2/                  # Test results with background removal
+        └── method_hsv_blocks_kmeans/
             ├── result.pkl
-            ├── retrieval_metrics.json
-            └── background_removal_metrics.json
+            └── 00000.png, 00001.png, ...  # Predicted masks
 ```
 
 ## 🎯 Key Features
 
 ### Week 1 Features
-- Basic color histogram descriptors
-- Histogram equalization preprocessing
-- Standard image retrieval evaluation
+- LAB and HSV color histogram descriptors
+- Gamma correction and histogram equalization preprocessing
+- Validation and test phase evaluation
 
 ### Week 2 Features
-- **Spatial descriptors**: Block histograms and spatial pyramids
-- **Background removal**: Automatic background removal for QSD2_W2
+- **Spatial descriptors**: HSV Block Histograms with configurable block sizes
+- **Background removal**: K-Means clustering for QSD2_W2 and QST2_W2
 - **Dual evaluation**: Both retrieval performance and background removal quality
-- **Flexible preprocessing**: Unified preprocessing system
+- **Multiple datasets**: QSD1_W1, QSD2_W2, QST1_W2, QST2_W2
 
 ## 🔍 Understanding the Results
 
@@ -218,13 +176,6 @@ Add debug prints to understand the pipeline:
 print(f"Query dataset size: {len(query_dataset.data)}")
 print(f"Index dataset size: {len(index_dataset.data)}")
 ```
-
-## 📈 Performance Tips
-
-1. **Use appropriate descriptors**: HSV works well for paintings, LAB for natural images
-2. **Apply preprocessing**: Histogram equalization often improves performance
-3. **Spatial descriptors**: Block histograms can capture spatial information
-4. **Background removal**: Essential for QSD2_W2 dataset
 
 ## 🤝 Contributing
 
