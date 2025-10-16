@@ -13,11 +13,13 @@ class DatasetType(Enum):
     QSD2_W2 = "qsd2_w2"
     QST1_W2 = "qst1_w2"
     QST2_W2 = "qst2_w2"
+    QSD1_W3 = "qsd1_w3"
 
 
 class WeekFolder(Enum):
     WEEK_1 = "week_1"
     WEEK_2 = "week_2"
+    WEEK_3 = "week_3"
 
 
 class DataLoader:
@@ -37,7 +39,7 @@ class DataLoader:
         if self.dataset_type is None:
             return False
         # Only validation datasets have ground truth, test datasets (QST*) do not
-        return self.dataset_type in [DatasetType.BBDD, DatasetType.QSD1_W1, DatasetType.QSD2_W2]
+        return self.dataset_type in [DatasetType.BBDD, DatasetType.QSD1_W1, DatasetType.QSD2_W2, DatasetType.QSD1_W3]
 
     def load_dataset(self, dataset: DatasetType) -> None:
         """Load dataset by DatasetType enum."""
@@ -55,6 +57,8 @@ class DataLoader:
             self.load_qst1_w2()
         elif dataset == DatasetType.QST2_W2:
             self.load_qst2_w2()
+        elif dataset == DatasetType.QSD1_W3:
+            self.load_qsd1_w3()
 
         self.dataset_type = dataset
 
@@ -290,6 +294,66 @@ class DataLoader:
 
         print(f"Successfully loaded {len(self.data)} images from qsd2_w2 dataset (with both original and background-removed versions)")
 
+    def load_qsd1_w3(self) -> None:
+        """Load qsd1_w3 dataset: JPG images, non-augmented JPG images and gt_corresps.pkl. (masks irrelevant)"""
+        dataset_path = os.path.join(self.data_path, "qsd1_w3")
+
+        if not os.path.exists(dataset_path):
+            raise FileNotFoundError(f"qsd1_w3 dataset path not found: {dataset_path}")
+
+        gt_file = os.path.join(dataset_path, "gt_corresps.pkl")
+        gt_correspondences = []
+
+        if os.path.exists(gt_file):
+            try:
+                with open(gt_file, "rb") as f:
+                    gt_correspondences = pickle.load(f)
+            except Exception as e:
+                print(f"Warning: Error loading ground truth correspondences: {e}")
+
+        try:
+            files = [
+                f
+                for f in os.listdir(dataset_path)
+                if f.endswith(".jpg") and os.path.isfile(os.path.join(dataset_path, f))
+            ]
+
+            for filename in files:
+                try:
+                    name_without_ext = filename.split(".")[0]
+                    image_id = int(name_without_ext)
+
+                    jpg_filename = os.path.join(dataset_path, filename)
+                    non_augm_jpg_filename = os.path.join(dataset_path, "non_augmented", filename)
+                    image = np.array(Image.open(non_augm_jpg_filename))
+                    non_augm_image = np.array(Image.open(jpg_filename))
+
+                    gt_correspondence = (
+                        gt_correspondences[image_id]
+                        if image_id < len(gt_correspondences)
+                        else None
+                    )
+
+                    txt_filename = os.path.join(dataset_path, f"{name_without_ext}.txt")
+                    with open(txt_filename, "r", encoding="utf-8", errors="ignore") as f:
+                        info = f.readline().strip()
+
+                    self.data[image_id] = {
+                        "image": image,
+                        "non_augm_image": non_augm_image,
+                        "info": info,
+                        "relationship": gt_correspondence,
+                    }
+
+                except Exception as e:
+                    print(f"Warning: Error processing {filename}: {e}")
+                    continue
+
+        except Exception as e:
+            raise Exception(f"Error reading qsd1_w3 directory: {e}")
+
+        print(f"Successfully loaded {len(self.data)} images from qsd1_w3 dataset")
+
     def load_qst1_w2(self) -> None:
         """Load qst1_w2 dataset: JPG images."""
         dataset_path = os.path.join(self.data_path, "qst1_w2")
@@ -364,18 +428,33 @@ class DataLoader:
 
         print(f"Successfully loaded {len(self.data)} images from qst2_w2 dataset")
 
-    def load_qsd1_w3(self):
-        
-
     def clear_dataset(self) -> None:
         self.data = {}
         self.dataset_type = None
 
     def iterate_images(self) -> Iterator[Tuple[int, np.ndarray, str, Any]]:
-        """Yield (id, image, info, relationship) for each loaded image."""
+        """
+        Yield (id, image, info, relationship) for each loaded image.
+        If dataset has non augmented image, yield
+              (id, image, non_augm_iamge, info, relationship).
+        """
         for image_id, values in self.data.items():
-            yield image_id, values["image"], values["info"], values["relationship"]
-
+            if self.dataset_type in [DatasetType.QSD1_W3]:
+                yield (
+                    image_id,
+                    values["image"],
+                    values["non_augm_image"],
+                    values["info"],
+                    values["relationship"],
+                )
+            else:
+                yield (
+                    image_id,
+                    values["image"],
+                    values["info"],
+                    values["relationship"],
+            )
+                
     def get_image_by_id(self, image_id: int) -> Optional[Dict[str, Any]]:
         return self.data.get(image_id)
 
