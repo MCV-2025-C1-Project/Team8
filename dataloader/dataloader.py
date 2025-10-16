@@ -364,6 +364,9 @@ class DataLoader:
 
         print(f"Successfully loaded {len(self.data)} images from qst2_w2 dataset")
 
+    def load_qsd1_w3(self):
+        
+
     def clear_dataset(self) -> None:
         self.data = {}
         self.dataset_type = None
