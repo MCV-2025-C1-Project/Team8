@@ -10,6 +10,7 @@ from descriptors.descriptors import DescriptorMethod
 from utils.measures import SimilarityMeasure
 from utils.metrics import mapk
 from preprocessing.preprocessors import PreprocessingMethod
+from tqdm import tqdm
 
 
 class DatasetRole(Enum):
@@ -49,7 +50,9 @@ class ImageRetrievalSystem:
             raise ValueError(f"Unknown dataset role: {role}")
 
         target_dict.clear()
-        for image_id, image, _, _ in loader.iterate_images():
+        for items in tqdm(loader.iterate_images(), desc="Computing descriptors"):
+            image_id = items[0]
+            image = items[1]
             desc = method.compute(
                 image, 
                 bins=bins, 
@@ -64,7 +67,8 @@ class ImageRetrievalSystem:
 
     def load_ground_truth(self) -> None:
         self.ground_truth = []
-        for _, _, _, relationship in self.query_dataset.iterate_images():
+        for items in self.query_dataset.iterate_images():
+            relationship = items[-1]
             if relationship is not None:
                 if isinstance(relationship, list):
                     self.ground_truth.append(relationship)
@@ -78,7 +82,7 @@ class ImageRetrievalSystem:
         predictions = []
 
         # For each query image, find the most similar index images
-        for query_id in sorted(self.query_descriptors.keys()):
+        for query_id in tqdm(sorted(self.query_descriptors.keys()), desc="Running retrieval on queries", total=len(self.query_descriptors)):
             query_desc = self.query_descriptors[query_id]
             similarities = []
 
