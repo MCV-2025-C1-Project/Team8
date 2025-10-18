@@ -1,5 +1,7 @@
 from dataloader.dataloader import DataLoader
 import numpy as np
+from preprocessing.preprocessors import PreprocessingMethod
+from utils.plots import plot_gaussian_psnr
 
 
 class NoiseFilteringAssessment():
@@ -48,3 +50,35 @@ class NoiseFilteringAssessment():
             avg_mse = np.mean(mse_values)
             avg_psnr = np.mean(psnr_values)
             print(f"  Preprocessor: {preprocessor.name}, Average MSE: {avg_mse:.2f}, Average PSNR: {avg_psnr:.2f} dB\n")
+    
+    def run_single_image(self, dataset_type, image_id, preprocessor):
+        """Run noise filtering assessment on a single image."""
+        self.dataset.load_dataset(dataset_type)
+        self.populate_images()
+
+        original = self.original_images[image_id]
+        noisy = self.noisy_images[image_id]
+
+        if preprocessor == PreprocessingMethod.GAUSSIAN:
+            # Assess the effect of sigma
+            for kernel_size in [(3, 3), (5, 5), (7, 7)]:
+                mse_values = []
+                psnr_values = []
+                range = np.arange(0.1, 2.1, 0.1)
+                for sigma in range:
+                    filtered = preprocessor.apply(noisy, kernel_size=kernel_size, sigma=sigma)
+                    mse = self.MSE(original, filtered)
+                    psnr = self.PSNR(mse)
+                    mse_values.append(mse)
+                    psnr_values.append(psnr)
+                plot_gaussian_psnr(
+                    original_img=original,
+                    noisy_img=noisy,
+                    filtered_img=filtered,
+                    sigma_values=list(range),
+                    psnr_values=psnr_values,
+                    title=f"Gaussian filter PSNR assessment wrt. sigma (kernel size={kernel_size})",
+                )
+        elif preprocessor == PreprocessingMethod.MEDIAN:
+            pass
+        

@@ -18,12 +18,22 @@ def main():
     print("=" * 60)
 
     nfa = NoiseFilteringAssessment()
+
+    print(f"\n--- NOISE FILTERING GENERAL ASSESSMENT ---\n")    
     nfa.run(
         dataset_type=DatasetType.QSD1_W3,
         preprocessors=[
             PreprocessingMethod.GAUSSIAN,
             PreprocessingMethod.MEDIAN,
         ]
+    )
+
+    print(f"\n--- NOISE FILTERING SINGLE IMAGE ASSESSMENT ---\n")
+    # run single image qualitative assessment
+    nfa.run_single_image(
+        dataset_type=DatasetType.QSD1_W3,
+        image_id=5,
+        preprocessor=PreprocessingMethod.GAUSSIAN,
     )
 
     print("\n" + "=" * 60)
@@ -41,6 +51,7 @@ def main():
         save_results=True,
         n_coefficients=n_coefficients,
     )
+    
     print("\nVALIDATION RESULTS (QSD1_W3)")
     print("-" * 30)
     print(f"DCT:         mAP@1={dct_results.get('mAP@1', float('nan')):.3f}, mAP@5={dct_results.get('mAP@5', float('nan')):.3f}, n_coefficients={n_coefficients}")
