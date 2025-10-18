@@ -1,6 +1,8 @@
+from dataloader.dataloader import DatasetType
 from services.image_retrieval_system import ImageRetrievalSystem
 from services.background_removal_image_retrieval_system import BackgroundRemovalImageRetrievalSystem
 from services.noise_filtering_assessment import NoiseFilteringAssessment
+from preprocessing.preprocessors import PreprocessingMethod
 
 
 def main():
@@ -14,6 +16,13 @@ def main():
     print("=" * 60)
 
     nfa = NoiseFilteringAssessment()
+    nfa.run(
+        dataset_type=DatasetType.QSD1_W3,
+        preprocessors=[
+            PreprocessingMethod.GAUSSIAN,
+            PreprocessingMethod.MEDIAN,
+        ]
+    )
 
     print("\n" + "=" * 60)
     print("TASK 2: IMAGE RETRIEVAL WITH TEXTURE DESCRIPTORS (QSD1_W3)")
