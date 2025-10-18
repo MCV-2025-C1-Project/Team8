@@ -325,8 +325,8 @@ class DataLoader:
 
                     jpg_filename = os.path.join(dataset_path, filename)
                     non_augm_jpg_filename = os.path.join(dataset_path, "non_augmented", filename)
-                    image = np.array(Image.open(non_augm_jpg_filename))
-                    non_augm_image = np.array(Image.open(jpg_filename))
+                    image = np.array(Image.open(jpg_filename))
+                    non_augm_image = np.array(Image.open(non_augm_jpg_filename))
 
                     gt_correspondence = (
                         gt_correspondences[image_id]
