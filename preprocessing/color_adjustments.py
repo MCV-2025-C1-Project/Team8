@@ -25,6 +25,8 @@ def apply_gaussian_blur(img: np.ndarray, kernel_size: Tuple[int, int] = (3, 3), 
 
 def apply_median_filter(img: np.ndarray, kernel_size: int = 3) -> np.ndarray:
     """Apply median filter to reduce noise while preserving edges."""
+    if type(kernel_size) == tuple:
+        kernel_size = kernel_size[0]
     return cv2.medianBlur(img, kernel_size)
 
 

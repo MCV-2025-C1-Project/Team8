@@ -1,7 +1,7 @@
 from dataloader.dataloader import DataLoader
 import numpy as np
 from preprocessing.preprocessors import PreprocessingMethod
-from utils.plots import plot_gaussian_psnr, plot_average_psnr
+from utils.plots import plot_gaussian_psnr, plot_psnr
 
 
 class NoiseFilteringAssessment():
@@ -71,7 +71,7 @@ class NoiseFilteringAssessment():
                 psnr = self.PSNR(mse)
                 mse_values.append(mse)
                 psnr_values.append(psnr)
-            plot_average_psnr(
+            plot_psnr(
                 original_img=original,
                 noisy_img=noisy,
                 filtered_img=filtered,
@@ -100,5 +100,20 @@ class NoiseFilteringAssessment():
                     title=f"Gaussian filter PSNR assessment wrt. sigma (kernel size={kernel_size})",
                 )
         elif preprocessor == PreprocessingMethod.MEDIAN:
-            pass
+            rng = range(3, 17, 2)
+            for k in rng:
+                kernel_size = (k, k)
+                filtered = preprocessor.apply(noisy, kernel_size=kernel_size)
+                mse = self.MSE(original, filtered)
+                psnr = self.PSNR(mse)
+                mse_values.append(mse)
+                psnr_values.append(psnr)
+            plot_psnr(
+                original_img=original,
+                noisy_img=noisy,
+                filtered_img=filtered,
+                kernel_sizes=list(rng),
+                psnr_values=psnr_values,
+                title=f"Median filter PSNR assessment wrt. kernel size",
+            )
         

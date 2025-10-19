@@ -10,7 +10,7 @@ def crop_center(img, zoom_factor):
     start_x = w // 2 - crop_w // 2
     return img[start_y:start_y + crop_h, start_x:start_x + crop_w]
 
-def plot_average_psnr(
+def plot_psnr(
         original_img,
         noisy_img,
         filtered_img,

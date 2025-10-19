@@ -23,6 +23,7 @@ def main():
     nfa.run(
         dataset_type=DatasetType.QSD1_W3,
         preprocessors=[
+            PreprocessingMethod.AVERAGE,
             PreprocessingMethod.GAUSSIAN,
             PreprocessingMethod.MEDIAN,
         ]
@@ -33,7 +34,7 @@ def main():
     nfa.run_single_image(
         dataset_type=DatasetType.QSD1_W3,
         image_id=5,
-        preprocessor=PreprocessingMethod.AVERAGE,
+        preprocessor=PreprocessingMethod.MEDIAN,
     )
 
     print("\n" + "=" * 60)
