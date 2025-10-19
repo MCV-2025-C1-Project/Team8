@@ -20,6 +20,7 @@ def main():
     nfa = NoiseFilteringAssessment()
 
     print(f"\n--- NOISE FILTERING GENERAL ASSESSMENT ---\n")    
+    
     nfa.run(
         dataset_type=DatasetType.QSD1_W3,
         preprocessors=[
@@ -31,11 +32,12 @@ def main():
 
     print(f"\n--- NOISE FILTERING SINGLE IMAGE ASSESSMENT ---\n")
     # run single image qualitative assessment
-    nfa.run_single_image(
-        dataset_type=DatasetType.QSD1_W3,
-        image_id=5,
-        preprocessor=PreprocessingMethod.MEDIAN,
-    )
+    for image_id in [5, 6, 16]: # [5, 6, 16] are the image IDs of the noisy images to be assessed
+        nfa.run_single_image(
+            dataset_type=DatasetType.QSD1_W3,
+            image_id=image_id,
+            preprocessor=PreprocessingMethod.MEDIAN,
+        )
 
     print("\n" + "=" * 60)
     print("TASK 2: IMAGE RETRIEVAL WITH TEXTURE DESCRIPTORS (QSD1_W3)")
@@ -47,6 +49,7 @@ def main():
         method=DescriptorMethod.DCT,
         measure=SimilarityMeasure.HIST_INTERSECT,
         index_dataset=DatasetType.BBDD,
+        preprocessing=PreprocessingMethod.HIST_EQ,
         query_dataset=DatasetType.QSD1_W3,
         week_folder=WeekFolder.WEEK_3,
         save_results=True,

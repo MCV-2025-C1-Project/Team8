@@ -77,7 +77,7 @@ class NoiseFilteringAssessment():
                 filtered_img=filtered,
                 kernel_sizes=list(rng),
                 psnr_values=psnr_values,
-                title=f"Average filter PSNR assessment wrt. kernel size",
+                title=f"Average filter PSNR assessment wrt. kernel size (Image ID: {image_id})",
             )
         elif preprocessor == PreprocessingMethod.GAUSSIAN:
             # Assess the effect of sigma
@@ -97,7 +97,7 @@ class NoiseFilteringAssessment():
                     filtered_img=filtered,
                     sigma_values=list(rng),
                     psnr_values=psnr_values,
-                    title=f"Gaussian filter PSNR assessment wrt. sigma (kernel size={kernel_size})",
+                    title=f"Gaussian filter PSNR assessment wrt. sigma (kernel size={kernel_size}) (Image ID: {image_id})",
                 )
         elif preprocessor == PreprocessingMethod.MEDIAN:
             rng = range(3, 17, 2)
@@ -114,6 +114,6 @@ class NoiseFilteringAssessment():
                 filtered_img=filtered,
                 kernel_sizes=list(rng),
                 psnr_values=psnr_values,
-                title=f"Median filter PSNR assessment wrt. kernel size",
+                title=f"Median filter PSNR assessment wrt. kernel size (Image ID: {image_id})",
             )
         
