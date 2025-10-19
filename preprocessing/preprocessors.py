@@ -3,7 +3,8 @@ import cv2
 from typing import Tuple, Callable
 from enum import Enum
 from preprocessing.color_adjustments import (
-    apply_histogram_equalization, 
+    apply_histogram_equalization,
+    apply_average_filter,
     apply_gaussian_blur, 
     apply_median_filter, 
     apply_gamma_correction
@@ -24,6 +25,7 @@ class PreprocessingMethod(Enum):
     # Color adjustments
     GAMMA = "gamma"
     HIST_EQ = "hist_eq"
+    AVERAGE = "average"
     GAUSSIAN = "gaussian"
     MEDIAN = "median"
     
@@ -40,6 +42,9 @@ class PreprocessingMethod(Enum):
         elif self == PreprocessingMethod.GAMMA:
             gamma = kwargs.get('gamma', 0.8)
             return apply_gamma_correction(img, gamma)
+        elif self == PreprocessingMethod.AVERAGE:
+            kernel_size = kwargs.get('kernel_size', (3, 3))
+            return apply_average_filter(img, kernel_size)
         elif self == PreprocessingMethod.GAUSSIAN:
             kernel_size = kwargs.get('kernel_size', (3, 3))
             sigma = kwargs.get('sigma', 0)

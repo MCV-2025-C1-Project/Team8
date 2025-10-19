@@ -1,7 +1,7 @@
 from dataloader.dataloader import DataLoader
 import numpy as np
 from preprocessing.preprocessors import PreprocessingMethod
-from utils.plots import plot_gaussian_psnr
+from utils.plots import plot_gaussian_psnr, plot_average_psnr
 
 
 class NoiseFilteringAssessment():
@@ -59,13 +59,33 @@ class NoiseFilteringAssessment():
         original = self.original_images[image_id]
         noisy = self.noisy_images[image_id]
 
-        if preprocessor == PreprocessingMethod.GAUSSIAN:
+        mse_values = []
+        psnr_values = []
+
+        if preprocessor == PreprocessingMethod.AVERAGE:
+            rng = range(3, 17, 2)
+            for k in rng:
+                kernel_size = (k, k)
+                filtered = preprocessor.apply(noisy, kernel_size=kernel_size)
+                mse = self.MSE(original, filtered)
+                psnr = self.PSNR(mse)
+                mse_values.append(mse)
+                psnr_values.append(psnr)
+            plot_average_psnr(
+                original_img=original,
+                noisy_img=noisy,
+                filtered_img=filtered,
+                kernel_sizes=list(rng),
+                psnr_values=psnr_values,
+                title=f"Average filter PSNR assessment wrt. kernel size",
+            )
+        elif preprocessor == PreprocessingMethod.GAUSSIAN:
             # Assess the effect of sigma
             for kernel_size in [(3, 3), (5, 5), (7, 7)]:
                 mse_values = []
                 psnr_values = []
-                range = np.arange(0.1, 2.1, 0.1)
-                for sigma in range:
+                rng = np.arange(0.1, 2.1, 0.1)
+                for sigma in rng:
                     filtered = preprocessor.apply(noisy, kernel_size=kernel_size, sigma=sigma)
                     mse = self.MSE(original, filtered)
                     psnr = self.PSNR(mse)
@@ -75,7 +95,7 @@ class NoiseFilteringAssessment():
                     original_img=original,
                     noisy_img=noisy,
                     filtered_img=filtered,
-                    sigma_values=list(range),
+                    sigma_values=list(rng),
                     psnr_values=psnr_values,
                     title=f"Gaussian filter PSNR assessment wrt. sigma (kernel size={kernel_size})",
                 )

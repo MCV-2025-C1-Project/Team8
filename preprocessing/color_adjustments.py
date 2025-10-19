@@ -14,6 +14,10 @@ def apply_histogram_equalization(img: np.ndarray) -> np.ndarray:
         # For grayscale images
         return cv2.equalizeHist(img)
 
+def apply_average_filter(img: np.ndarray, kernel_size: Tuple[int, int] = (3, 3)) -> np.ndarray:
+    """Apply average filter to reduce noise."""
+    return cv2.blur(img, kernel_size)
+
 def apply_gaussian_blur(img: np.ndarray, kernel_size: Tuple[int, int] = (3, 3), sigma: float = 0) -> np.ndarray:
     """Apply Gaussian blur to reduce noise."""
     return cv2.GaussianBlur(img, kernel_size, sigma)
