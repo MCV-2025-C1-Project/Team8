@@ -32,7 +32,7 @@ class NoiseFilteringAssessment():
             self.original_images.append(non_augm_image)
             self.noisy_images.append(image)
 
-    def run(self, dataset_type, preprocessors):
+    def run(self, dataset_type, preprocessors: list[PreprocessingMethod]):
         """Run noise filtering assessment."""
         self.dataset.load_dataset(dataset_type)
         self.populate_images()

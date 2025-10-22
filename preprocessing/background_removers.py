@@ -4,6 +4,7 @@ np.set_printoptions(precision=2)
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 from enum import Enum
+from typing import Optional
 
 
 class BackgroundRemovalMethod(Enum):
@@ -61,9 +62,52 @@ def remove_black_margins(mask_255: np.ndarray, processed_img: np.ndarray):
         if not removed:
             break
     return processed_img
-    
 
-def remove_background_by_kmeans(img: np.ndarray, k: int = 5, margin: int = 45, visualise: bool = True):
+def detect_split_column(kmeans_labels: np.ndarray, k: int = 100, max_changes: int = 3, visualise: bool = False) -> Optional[int]:
+    h, w = kmeans_labels.shape
+    mid = w // 2
+    x_start = max(0, mid - k)
+    x_end = min(w, mid + k)
+
+    candidate_columns = []
+
+    kernel = np.ones((10, 10), np.uint8)
+    kmeans_labels = cv2.dilate(kmeans_labels.astype(np.uint8), kernel)
+
+    consecutive = 0
+    for x in range(x_start, x_end):
+        col = kmeans_labels[:, x]
+        changes = np.diff(col) != 0
+        n_changes = np.sum(changes)
+
+        if n_changes <= max_changes:
+            consecutive += 1
+            if consecutive == 10:
+                candidate_columns.append(x-5)
+        else:
+            consecutive = 0
+
+    if visualise:
+        import matplotlib.pyplot as plt
+        plt.figure(figsize=(8, 6))
+        plt.imshow(kmeans_labels, cmap='tab20')
+        plt.title("K-Means Labels with No Split Column Detected")
+        plt.axis('off')
+
+        if candidate_columns:
+            split_x = candidate_columns[len(candidate_columns) // 2]
+            plt.axvline(x=split_x, color='red', linestyle='--')
+
+        plt.show()
+
+    if candidate_columns:
+        split_x = candidate_columns[len(candidate_columns) // 2]
+        return split_x
+
+    return None
+
+
+def remove_background_by_kmeans(img: np.ndarray, k: int = 5, margin: int = 10, subdivide: bool = False, visualise: bool = True):
     h, w = img.shape[:2]
     img_lab = cv2.cvtColor(img, cv2.COLOR_BGR2Lab)
 
@@ -73,6 +117,15 @@ def remove_background_by_kmeans(img: np.ndarray, k: int = 5, margin: int = 45, v
     _, labels, _ = cv2.kmeans(pixels, k, None, criteria, 10, cv2.KMEANS_PP_CENTERS)
     labels = labels.flatten().reshape((h, w))
     labels_copy = labels.copy()
+
+    if subdivide:
+        split_x = detect_split_column(labels_copy, visualise=visualise)
+        if split_x is not None:
+            [left_mask] , [left_processed] = remove_background_by_kmeans(
+                img[:, :split_x, :], k, margin, subdivide=False, visualise=visualise)
+            [right_mask], [right_processed] = remove_background_by_kmeans(
+                img[:, split_x:, :], k, margin, subdivide=False, visualise=visualise)
+            return [left_mask, left_processed], [right_mask, right_processed]
 
     # --- FLOOD FILL FROM BORDERS ---
     border_mask = np.zeros((h, w), dtype=bool)
@@ -166,8 +219,8 @@ def remove_background_by_kmeans(img: np.ndarray, k: int = 5, margin: int = 45, v
 
     # Remove black margins from processed image
     processed_img = remove_black_margins(mask_255, processed_img)
-    
-    return mask_255, processed_img
+        
+    return [mask_255], [processed_img]
 
 def remove_background_by_rectangles(
         img: np.ndarray,
@@ -280,18 +333,19 @@ def remove_background_by_rectangles(
 
     return mask_inv, result_bgr
 
-
 if __name__ == "__main__":
     remover = "kmeans"  # "kmeans" or "rectangles"
 
     import glob
-    path = "data/qsd2_w2/"
+    path = "data/qsd2_w3/"
     import time
     init_time = time.time()
     for image_path in glob.glob(f"{path}*.jpg"):
+        # image_path = path + "00018.jpg"
         img = cv2.imread(image_path)
+        img = cv2.medianBlur(img, 3)
         if remover == "kmeans":
-            remove_background_by_kmeans(img, visualise=True)
+            remove_background_by_kmeans(img, subdivide=True, visualise=True)
         elif remover == "rectangles":
             remove_background_by_rectangles(img, offset=40, h_delta=20, s_delta=60, v_delta=60, visualise=True)
     print("Temps total:", time.time() - init_time)
