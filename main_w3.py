@@ -45,6 +45,8 @@ def main():
 
     retrieval_system = ImageRetrievalSystem()
     n_coefficients = 6
+    
+    # DCT Results
     dct_results = retrieval_system.run(
         method=DescriptorMethod.DCT,
         measure=SimilarityMeasure.HIST_INTERSECT,

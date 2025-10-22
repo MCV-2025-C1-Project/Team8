@@ -101,7 +101,7 @@ class DescriptorMethod(Enum):
                     img, 
                     radius=preprocessing_kwargs.get("radius", 1),
                     n_neighbors=preprocessing_kwargs.get("n_neighbors", 8),
-                    method=preprocessing_kwargs.get("method", "uniform")
+                    lbp_method=preprocessing_kwargs.get("lbp_method", "uniform")
                 )
 
         else:

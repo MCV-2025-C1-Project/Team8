@@ -26,15 +26,15 @@ def dct_descriptor(img: np.ndarray, n_coefficients: int) -> np.ndarray:
     return np.array(descriptor)
 
 
-def lbp_descriptor(img: np.ndarray, radius: int = 1, n_neighbors: int = 8, method: str = 'uniform') -> np.ndarray:
+def lbp_descriptor(img: np.ndarray, radius: int = 1, n_neighbors: int = 8, lbp_method: str = 'uniform') -> np.ndarray:
     """
-    Local Binary Pattern (LBP) texture descriptor.
+    Local Binary Pattern (LBP) texture descriptor - optimized version.
     
     Args:
         img: Input image as numpy array
         radius: Radius of the circle around each pixel (default: 1)
         n_neighbors: Number of neighbors to sample around each pixel (default: 8)
-        method: LBP method - 'uniform' or 'nri_uniform' (default: 'uniform')
+        lbp_method: LBP method - 'uniform' or 'nri_uniform' (default: 'uniform')
     
     Returns:
         LBP histogram as numpy array
@@ -51,44 +51,45 @@ def lbp_descriptor(img: np.ndarray, radius: int = 1, n_neighbors: int = 8, metho
     # Get image dimensions
     height, width = img.shape
     
+    # Pre-compute sampling coordinates for efficiency
+    angles = np.linspace(0, 2 * np.pi, n_neighbors, endpoint=False)
+    x_offsets = np.round(radius * np.cos(angles)).astype(int)
+    y_offsets = np.round(radius * np.sin(angles)).astype(int)
+    
     # Initialize LBP image
     lbp_image = np.zeros((height, width), dtype=np.uint8)
     
-    # Calculate LBP for each pixel
+    # LBP computation with vectorized operations
     for y in range(radius, height - radius):
         for x in range(radius, width - radius):
             center = img[y, x]
-            binary_string = ""
             
-            # Sample points around the center pixel
-            for i in range(n_neighbors):
-                angle = 2 * np.pi * i / n_neighbors
-                x_offset = int(round(radius * np.cos(angle)))
-                y_offset = int(round(radius * np.sin(angle)))
-                
-                neighbor_x = x + x_offset
-                neighbor_y = y + y_offset
-                
-                # Handle boundary conditions
-                if 0 <= neighbor_x < width and 0 <= neighbor_y < height:
-                    neighbor_value = img[neighbor_y, neighbor_x]
-                else:
-                    neighbor_value = center  # Use center value for out-of-bounds
-                
-                # Create binary string
-                binary_string += "1" if neighbor_value >= center else "0"
+            # Get all neighbors at once using vectorized indexing
+            neighbor_x = x + x_offsets
+            neighbor_y = y + y_offsets
             
-            # Convert binary string to decimal
-            lbp_value = int(binary_string, 2)
+            # Handle boundary conditions efficiently
+            valid_mask = (neighbor_x >= 0) & (neighbor_x < width) & (neighbor_y >= 0) & (neighbor_y < height)
+            neighbor_values = np.where(valid_mask, 
+                                     img[neighbor_y, neighbor_x], 
+                                     center)
+            
+            # Vectorized comparison and bit conversion
+            binary_pattern = (neighbor_values >= center).astype(int)
+            
+            # Convert to decimal using bit shifting (much faster than string conversion)
+            lbp_value = 0
+            for i, bit in enumerate(binary_pattern):
+                lbp_value += bit * (2 ** (n_neighbors - 1 - i))
             
             # Apply uniform pattern reduction if specified
-            if method == 'uniform':
-                lbp_value = _uniform_pattern(lbp_value, n_neighbors)
+            if lbp_method == 'uniform':
+                lbp_value = _uniform_pattern_fast(lbp_value, n_neighbors)
             
             lbp_image[y, x] = lbp_value
     
     # Create histogram
-    if method == 'uniform':
+    if lbp_method == 'uniform':
         # For uniform patterns, we have n_neighbors + 2 bins (0, 1, ..., n_neighbors, non-uniform)
         n_bins = n_neighbors + 2
     else:
@@ -104,18 +105,17 @@ def lbp_descriptor(img: np.ndarray, radius: int = 1, n_neighbors: int = 8, metho
     return histogram
 
 
-def _uniform_pattern(lbp_value: int, n_neighbors: int) -> int:
+def _uniform_pattern_fast(lbp_value: int, n_neighbors: int) -> int:
     """
-    Convert LBP value to uniform pattern.
+    Fast uniform pattern conversion using bit operations.
     A uniform pattern is one that has at most 2 transitions between 0 and 1.
     """
-    # Convert to binary string with leading zeros
-    binary_str = format(lbp_value, f'0{n_neighbors}b')
-    
-    # Count transitions
+    # Count transitions using bit operations (much faster than string operations)
     transitions = 0
     for i in range(n_neighbors):
-        if binary_str[i] != binary_str[(i + 1) % n_neighbors]:
+        current_bit = (lbp_value >> (n_neighbors - 1 - i)) & 1
+        next_bit = (lbp_value >> (n_neighbors - 1 - ((i + 1) % n_neighbors))) & 1
+        if current_bit != next_bit:
             transitions += 1
     
     # If more than 2 transitions, it's non-uniform
