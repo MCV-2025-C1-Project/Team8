@@ -3,7 +3,7 @@ from typing import List
 from preprocessing.preprocessors import PreprocessingMethod
 from descriptors.color_histograms import histogram_grayscale, histogram_rgb, histogram_lab, histogram_hsv
 from descriptors.spatial_histograms import block_histogram, spatial_pyramid_histogram
-from descriptors.texture_descriptors import dct_descriptor
+from descriptors.texture_descriptors import dct_descriptor, lbp_descriptor
 from descriptors.three_d_histograms import three_d_histogram
 
 
@@ -33,6 +33,7 @@ class DescriptorMethod(Enum):
 
     # Texture descriptors
     DCT = "dct"
+    LBP = "lbp"
     
     def _get_base_color_function(self):
         """Get the base color histogram function for spatial methods."""        
@@ -93,7 +94,15 @@ class DescriptorMethod(Enum):
             return spatial_pyramid_histogram(img, base_function, max_level, bins, preprocessing, **preprocessing_kwargs)
         
         elif self.is_texture_descriptor:
-            return dct_descriptor(img, n_coefficients=preprocessing_kwargs.get("n_coefficients", 16))
+            if self == DescriptorMethod.DCT:
+                return dct_descriptor(img, n_coefficients=preprocessing_kwargs.get("n_coefficients", 16))
+            elif self == DescriptorMethod.LBP:
+                return lbp_descriptor(
+                    img, 
+                    radius=preprocessing_kwargs.get("radius", 1),
+                    n_neighbors=preprocessing_kwargs.get("n_neighbors", 8),
+                    method=preprocessing_kwargs.get("method", "uniform")
+                )
 
         else:
             raise ValueError(f"Unknown descriptor method: {self}")
@@ -124,7 +133,7 @@ class DescriptorMethod(Enum):
     
     @property
     def is_texture_descriptor(self) -> bool:
-        return self.value in ["dct"]
+        return self.value in ["dct", "lbp"]
     
     @property
     def base_color_method(self) -> str:
