@@ -83,7 +83,7 @@ class BackgroundRemovalImageRetrievalSystem:
         processed_count = 0
         for image_id, image, info, relationship in dataset.iterate_images():
             # Apply background removal to get both mask and processed image
-            predicted_mask, processed_image = self.background_removal_function(image, **self.background_removal_kwargs)
+            [predicted_mask], [processed_image] = self.background_removal_function(image, **self.background_removal_kwargs)
             
             # Store the predicted mask for evaluation (query only)
             if dataset_type == "query":

@@ -331,7 +331,7 @@ def remove_background_by_rectangles(
     # Remove black margins from result image
     result_bgr = remove_black_margins(mask_inv, result_bgr)
 
-    return mask_inv, result_bgr
+    return [mask_inv], [result_bgr]
 
 if __name__ == "__main__":
     remover = "kmeans"  # "kmeans" or "rectangles"
