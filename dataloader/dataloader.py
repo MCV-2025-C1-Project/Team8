@@ -391,6 +391,16 @@ class DataLoader:
                     image = np.array(Image.open(jpg_filename))
                     non_augm_image = np.array(Image.open(non_augm_jpg_filename))
 
+                    # Load corresponding PNG image (background removed)
+                    png_filename = f"{name_without_ext}.png"
+                    png_path = os.path.join(dataset_path, png_filename)
+                    background_removed_image = None
+                    
+                    if os.path.exists(png_path):
+                        background_removed_image = np.array(Image.open(png_path))
+                    else:
+                        print(f"Warning: PNG file not found for {name_without_ext}")
+
                     gt_correspondence = (
                         gt_correspondences[image_id]
                         if image_id < len(gt_correspondences)
@@ -403,6 +413,7 @@ class DataLoader:
 
                     self.data[image_id] = {
                         "image": image,
+                        "background_removed": background_removed_image,  # Image with background removed
                         "non_augm_image": non_augm_image,
                         "info": info,
                         "relationship": gt_correspondence,

@@ -51,7 +51,7 @@ class NoiseFilteringAssessment():
             avg_psnr = np.mean(psnr_values)
             print(f"  Preprocessor: {preprocessor.name}, Average MSE: {avg_mse:.2f}, Average PSNR: {avg_psnr:.2f} dB\n")
     
-    def run_single_image(self, dataset_type, image_id, preprocessor):
+    def run_single_image(self, dataset_type, image_id, preprocessor: PreprocessingMethod):
         """Run noise filtering assessment on a single image."""
         self.dataset.load_dataset(dataset_type)
         self.populate_images()

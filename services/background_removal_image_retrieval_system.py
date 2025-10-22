@@ -81,17 +81,19 @@ class BackgroundRemovalImageRetrievalSystem:
             print("Applying background removal to index images...")
         
         processed_count = 0
-        for image_id, image, info, relationship in dataset.iterate_images():
+        for image_id, image, *_ in dataset.iterate_images():
             # Apply background removal to get both mask and processed image
-            [predicted_mask], [processed_image] = self.background_removal_function(image, **self.background_removal_kwargs)
+            image = PreprocessingMethod.MEDIAN.apply(image) # Pre-smooth to reduce noise
+            predicted_masks, processed_images = self.background_removal_function(image, **self.background_removal_kwargs)
             
             # Store the predicted mask for evaluation (query only)
             if dataset_type == "query":
+                predicted_mask = np.concatenate(predicted_masks, axis=1)
                 self.predicted_masks[image_id] = predicted_mask
             
             # Update the dataset with processed image
             if image_id in dataset.data:
-                dataset.data[image_id]["image"] = processed_image
+                dataset.data[image_id]["image"] = processed_images
                 processed_count += 1
         
         print(f"Background removal applied to {processed_count} {dataset_type} images")
@@ -111,19 +113,24 @@ class BackgroundRemovalImageRetrievalSystem:
         self.query_descriptors.clear()
         
         print("Computing query descriptors...")
-        for image_id, image, _, _ in self.query_dataset.iterate_images():
-            desc = method.compute(
-                image, 
-                bins=bins, 
-                preprocessing=preprocessing,
-                ns_blocks=ns_blocks,
-                max_level=max_level,
-                **preprocessing_kwargs
-            )
-            self.query_descriptors[image_id] = desc
+        for image_id, images, *_ in self.query_dataset.iterate_images():
+            if not isinstance(images, list):
+                images = [images]
+            descs = []
+            for image in images:
+                desc = method.compute(
+                    image, 
+                    bins=bins, 
+                    preprocessing=preprocessing,
+                    ns_blocks=ns_blocks,
+                    max_level=max_level,
+                    **preprocessing_kwargs
+                )
+                descs.append(desc)
+            self.query_descriptors[image_id] = descs
 
         print("Computing index descriptors...")
-        for image_id, image, _, _ in self.index_dataset.iterate_images():
+        for image_id, image, *_ in self.index_dataset.iterate_images():
             desc = method.compute(
                 image, 
                 bins=bins, 
@@ -139,7 +146,7 @@ class BackgroundRemovalImageRetrievalSystem:
     def load_ground_truth(self) -> None:
         """Load ground truth correspondences for QSD2_W2."""
         self.ground_truth = []
-        for _, _, _, relationship in self.query_dataset.iterate_images():
+        for *_, relationship in self.query_dataset.iterate_images():
             if relationship is not None:
                 if isinstance(relationship, list):
                     self.ground_truth.append(relationship)
@@ -154,19 +161,24 @@ class BackgroundRemovalImageRetrievalSystem:
         predictions = []
 
         for query_id in sorted(self.query_descriptors.keys()):
-            query_desc = self.query_descriptors[query_id]
-            similarities = []
+            query_descs = self.query_descriptors[query_id]
+            if not isinstance(query_descs, list):
+                query_descs = [query_descs]
 
-            for index_id, index_desc in self.index_descriptors.items():
-                similarity = measure.compute(query_desc, index_desc)
-                if measure.is_similarity:
-                    similarities.append((-similarity, index_id))
-                elif measure.is_distance:
-                    similarities.append((similarity, index_id))
+            image_predictions = []
+            for query_desc in query_descs:
+                similarities = []
+                for index_id, index_desc in self.index_descriptors.items():
+                    similarity = measure.compute(query_desc, index_desc)
+                    if measure.is_similarity:
+                        similarities.append((-similarity, index_id))
+                    elif measure.is_distance:
+                        similarities.append((similarity, index_id))
     
-            similarities.sort(key=lambda x: x[0])
-            top_k_ids = [index_id for _, index_id in similarities[:k]]
-            predictions.append(top_k_ids)
+                similarities.sort(key=lambda x: x[0])
+                top_k_ids = [index_id for _, index_id in similarities[:k]]
+                image_predictions.append(top_k_ids)
+            predictions.append(image_predictions)
             
         print(f"Retrieved top-{k} similar images for {len(predictions)} query images")
         return predictions
@@ -176,11 +188,15 @@ class BackgroundRemovalImageRetrievalSystem:
         if not self.ground_truth:
             print("No ground truth available for evaluation")
             return {}
+
+        # Separate two images per query into individual entries
+        temp_ground_truth = [[gt] for sublist in self.ground_truth for gt in sublist]
+        predictions = [pred for sublist in predictions for pred in sublist]
         
         # Evaluate with K=5 for metrics
         predictions_k5 = [pred[:5] for pred in predictions]
-        map_at_1 = mapk(self.ground_truth, predictions_k5, k=1)
-        map_at_5 = mapk(self.ground_truth, predictions_k5, k=5)
+        map_at_1 = mapk(temp_ground_truth, predictions_k5, k=1)
+        map_at_5 = mapk(temp_ground_truth, predictions_k5, k=5)
         
         return {"mAP@1": map_at_1, "mAP@5": map_at_5}
 
@@ -195,7 +211,7 @@ class BackgroundRemovalImageRetrievalSystem:
             ground_truth_masks = []
             predicted_masks = []
             
-            for image_id, image, info, relationship in self.query_dataset.iterate_images():
+            for image_id, *_ in self.query_dataset.iterate_images():
                 # Get ground truth mask (PNG file)
                 image_data = self.query_dataset.get_image_by_id(image_id)
                 if image_data and "background_removed" in image_data:
@@ -295,7 +311,7 @@ class BackgroundRemovalImageRetrievalSystem:
         """
         Run the complete background removal + image retrieval pipeline.
         """
-                
+        
         # Set background removal method
         self.set_background_removal_method(background_remover, **background_removal_kwargs)
         

@@ -68,7 +68,31 @@ def main():
 
     bg_retrieval_system = BackgroundRemovalImageRetrievalSystem()
 
+    print("\nMETHOD 1: HSV_BLOCKS with K-Means Background Removal")
+    k_means_results = bg_retrieval_system.run(
+        method=DescriptorMethod.HSV_BLOCKS,
+        measure=SimilarityMeasure.HIST_INTERSECT,
+        index_dataset=DatasetType.BBDD,
+        query_dataset=DatasetType.QSD2_W3,
+        week_folder=WeekFolder.WEEK_3,
+        save_results=True,
+        preprocessing=PreprocessingMethod.HIST_EQ,
+        background_remover=PreprocessingMethod.BG_KMEANS,
+        subdivide=True,
+        visualise=False
+    )
 
+    print("\nVALIDATION RESULTS (QSD2_W3)")
+    print("-" * 30)
+    if 'mAP@1' in k_means_results and 'mAP@5' in k_means_results:
+        print(f"K-Means RETRIEVAL PERFORMANCE:")
+        print(f"  mAP@1: {k_means_results['mAP@1']:.3f}")
+        print(f"  mAP@5: {k_means_results['mAP@5']:.3f}")
+    if 'precision' in k_means_results and 'recall' in k_means_results and 'f1' in k_means_results:
+        print(f"\nK-Means BACKGROUND REMOVAL QUALITY:")
+        print(f"  Precision: {k_means_results['precision']:.3f}")
+        print(f"  Recall:    {k_means_results['recall']:.3f}")
+        print(f"  F1-Score:  {k_means_results['f1']:.3f}")
 
 
 if __name__ == "__main__":

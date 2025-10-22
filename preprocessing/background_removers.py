@@ -121,11 +121,11 @@ def remove_background_by_kmeans(img: np.ndarray, k: int = 5, margin: int = 10, s
     if subdivide:
         split_x = detect_split_column(labels_copy, visualise=visualise)
         if split_x is not None:
-            [left_mask] , [left_processed] = remove_background_by_kmeans(
+            [left_mask], [left_processed] = remove_background_by_kmeans(
                 img[:, :split_x, :], k, margin, subdivide=False, visualise=visualise)
             [right_mask], [right_processed] = remove_background_by_kmeans(
                 img[:, split_x:, :], k, margin, subdivide=False, visualise=visualise)
-            return [left_mask, left_processed], [right_mask, right_processed]
+            return [left_mask, right_mask], [left_processed, right_processed]
 
     # --- FLOOD FILL FROM BORDERS ---
     border_mask = np.zeros((h, w), dtype=bool)
