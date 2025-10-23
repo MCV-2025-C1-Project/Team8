@@ -56,8 +56,8 @@ class NoiseFilteringAssessment():
         self.dataset.load_dataset(dataset_type)
         self.populate_images()
 
-        original = self.original_images[image_id]
-        noisy = self.noisy_images[image_id]
+        original = self.original_images[image_id-1]
+        noisy = self.noisy_images[image_id-1]
 
         mse_values = []
         psnr_values = []
