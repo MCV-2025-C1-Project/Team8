@@ -22,39 +22,34 @@ def get_background_removal_function(method: BackgroundRemovalMethod):
     else:
         raise ValueError(f"Unknown background removal method: {method}")
 
-def remove_black_margins(mask_255: np.ndarray, processed_img: np.ndarray):
+def remove_black_margins(processed_img: np.ndarray):
     # Iteratively strip fully-black rows/columns at the image edges (connected to margins)
-    # mask_255: 0 for background, 255 for object
     while True:
-        h, w = mask_255.shape[:2]
+        h, w = processed_img.shape[:2]
         if h == 0 or w == 0:
             break
         removed = False
 
         # top row
-        if np.all(mask_255[0, :] == 0):
-            mask_255 = mask_255[1:, :]
+        if np.all(processed_img[0, :, :] == 0):
             processed_img = processed_img[1:, :, :]
             removed = True
             continue
 
         # bottom row
-        if np.all(mask_255[-1, :] == 0):
-            mask_255 = mask_255[:-1, :]
+        if np.all(processed_img[-1, :, :] == 0):
             processed_img = processed_img[:-1, :, :]
             removed = True
             continue
 
         # left column
-        if np.all(mask_255[:, 0] == 0):
-            mask_255 = mask_255[:, 1:]
+        if np.all(processed_img[:, 0] == 0):
             processed_img = processed_img[:, 1:, :]
             removed = True
             continue
 
         # right column
-        if np.all(mask_255[:, -1] == 0):
-            mask_255 = mask_255[:, :-1]
+        if np.all(processed_img[:, -1] == 0):
             processed_img = processed_img[:, :-1, :]
             removed = True
             continue
@@ -63,11 +58,11 @@ def remove_black_margins(mask_255: np.ndarray, processed_img: np.ndarray):
             break
     return processed_img
 
-def detect_split_column(kmeans_labels: np.ndarray, k: int = 100, max_changes: int = 3, visualise: bool = False) -> Optional[int]:
+def detect_split_column(kmeans_labels: np.ndarray, k: int = 8, max_changes: int = 3, visualise: bool = False) -> Optional[int]:
     h, w = kmeans_labels.shape
     mid = w // 2
-    x_start = max(0, mid - k)
-    x_end = min(w, mid + k)
+    x_start = max(0, mid - w // k)
+    x_end = min(w, mid + w // k)
 
     candidate_columns = []
 
@@ -107,9 +102,10 @@ def detect_split_column(kmeans_labels: np.ndarray, k: int = 100, max_changes: in
     return None
 
 
-def remove_background_by_kmeans(img: np.ndarray, k: int = 5, margin: int = 10, subdivide: bool = False, visualise: bool = True):
+def remove_background_by_kmeans(img: np.ndarray, k: int = 6, margin: int = 2, subdivide: bool = False, visualise: bool = False):
     h, w = img.shape[:2]
-    img_lab = cv2.cvtColor(img, cv2.COLOR_BGR2Lab)
+    img_blur = cv2.blur(img, (3, 3))
+    img_lab = cv2.cvtColor(img_blur, cv2.COLOR_BGR2Lab)
 
     # --- K-MEANS ---
     pixels = img_lab.reshape((-1, 3)).astype(np.float32)
@@ -127,30 +123,27 @@ def remove_background_by_kmeans(img: np.ndarray, k: int = 5, margin: int = 10, s
                 img[:, split_x:, :], k, margin, subdivide=False, visualise=visualise)
             return [left_mask, right_mask], [left_processed, right_processed]
 
-    # --- FLOOD FILL FROM BORDERS ---
-    border_mask = np.zeros((h, w), dtype=bool)
-    border_mask[:margin, :] = True       # top
-    border_mask[-margin:, :] = True      # bottom
-    border_mask[:, :margin] = True       # left
-    border_mask[:, -margin:] = True      # right
-
+    # --- FLOOD FILL FROM BORDERS WITH RECTANGULAR MASK ---
     for x in range(w):
-        for y in list(range(0, margin)) + list(range(h-margin, h)):
+        for y in list(range(0, margin + 1)) + list(range(h - margin, h)):
             if labels_copy[y, x] != -1:
                 cv2.floodFill(labels_copy, None, (x, y), -1)
 
     for y in range(h):
-        for x in list(range(0, margin)) + list(range(w-margin, w)):
+        for x in list(range(0, margin + 1)) + list(range(w - margin, w)):
             if labels_copy[y, x] != -1:
                 cv2.floodFill(labels_copy, None, (x, y), -1)
+
 
     mask = np.where(labels_copy >= 0, 1, 0)
 
     # --- REMOVE SMALL BLACK HOLES ---
     kernel = np.ones((10, 10), np.uint8)
-    mask_dilated = cv2.dilate(mask.astype(np.uint8), kernel)
-    mask_eroded = cv2.erode(mask_dilated, kernel)
-    mask = mask_eroded
+    inner_margin = 10
+    inner = mask[inner_margin:h - inner_margin, inner_margin:w - inner_margin].astype(np.uint8)
+    inner_dilated = cv2.dilate(inner, kernel)
+    inner_eroded = cv2.erode(inner_dilated, kernel)
+    mask[inner_margin:h - inner_margin, inner_margin:w - inner_margin] = inner_eroded
 
     # --- FILL HOLES ---
     mask[mask == 0] = 2
@@ -160,6 +153,15 @@ def remove_background_by_kmeans(img: np.ndarray, k: int = 5, margin: int = 10, s
     mask[mask == 1] = 2
     cv2.floodFill(mask, None, (w//2, h//2), 1)
     mask[mask == 2] = 0
+
+    # Convert mask to 0-255 range for consistency
+    mask_255 = (mask * 255).astype(np.uint8)
+    
+    # Apply mask to original image to create processed image
+    processed_img = cv2.bitwise_and(img, img, mask=mask_255)
+
+    # Remove black margins from processed image
+    processed_img = remove_black_margins(processed_img)
 
     if visualise:
         # --- PLOT ---
@@ -200,25 +202,12 @@ def remove_background_by_kmeans(img: np.ndarray, k: int = 5, margin: int = 10, s
         plt.title("Binary Mask: 1 = object, 0 = background")
         plt.axis("off")
 
-        # Apply mask to original image
-        masked_img = original_rgb.copy()
-        masked_img[mask == 0] = 0
-
         plt.subplot(1,4,4)
-        plt.imshow(masked_img)
+        plt.imshow(cv2.cvtColor(processed_img, cv2.COLOR_BGR2RGB))
         plt.title("Image with Mask Applied")
         plt.axis("off")
 
         plt.show()
-    
-    # Convert mask to 0-255 range for consistency
-    mask_255 = (mask * 255).astype(np.uint8)
-    
-    # Apply mask to original image to create processed image
-    processed_img = cv2.bitwise_and(img, img, mask=mask_255)
-
-    # Remove black margins from processed image
-    processed_img = remove_black_margins(mask_255, processed_img)
         
     return [mask_255], [processed_img]
 
@@ -275,7 +264,9 @@ def remove_background_by_rectangles(
     result_hsv = cv2.bitwise_and(hsv, hsv, mask=mask_inv)
     result_bgr = cv2.cvtColor(result_hsv, cv2.COLOR_HSV2BGR)
 
-    result_bgr = cv2.cvtColor(result_hsv, cv2.COLOR_HSV2BGR)
+    # Remove black margins from result image
+    result_bgr = remove_black_margins(result_bgr)
+
     if visualise:
         plt.figure(figsize=(20, 6))
         plt.subplot(1, 5, 1)
@@ -327,9 +318,6 @@ def remove_background_by_rectangles(
 
         plt.tight_layout()
         plt.show()
-    
-    # Remove black margins from result image
-    result_bgr = remove_black_margins(mask_inv, result_bgr)
 
     return [mask_inv], [result_bgr]
 
@@ -341,7 +329,6 @@ if __name__ == "__main__":
     import time
     init_time = time.time()
     for image_path in glob.glob(f"{path}*.jpg"):
-        # image_path = path + "00018.jpg"
         img = cv2.imread(image_path)
         img = cv2.medianBlur(img, 3)
         if remover == "kmeans":
