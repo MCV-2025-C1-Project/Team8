@@ -86,6 +86,64 @@ class BackgroundRemovalImageRetrievalSystem:
             image = PreprocessingMethod.MEDIAN.apply(image) # Pre-smooth to reduce noise
             predicted_masks, processed_images = self.background_removal_function(image, **self.background_removal_kwargs)
             
+            if False:  # DEBUG VISUALISATION
+                image_data = self.query_dataset.get_image_by_id(image_id)
+
+                image = image_data["image"]
+                mask = image_data["background_removed"]
+
+                # Check if mask contains 2 white regions
+                import cv2
+                num_labels, _ = cv2.connectedComponents(mask)
+                num_regions = num_labels - 1  # Exclude background label 0
+                
+                masks = []
+                images = []
+                if num_regions == 2:
+                    left_mask = mask[:, :mask.shape[1]//2]
+                    right_mask = mask[:, mask.shape[1]//2:]
+                    masks.append(left_mask)
+                    masks.append(right_mask)
+
+                    left_image = image[:, :mask.shape[1]//2]
+                    right_image = image[:, mask.shape[1]//2:]
+
+                    
+                    left_image = cv2.bitwise_and(left_image, left_image, mask=left_mask)
+                    right_image = cv2.bitwise_and(right_image, right_image, mask=right_mask)
+
+                    from preprocessing.background_removers import remove_black_margins
+                    left_image = remove_black_margins(left_image)
+                    right_image = remove_black_margins(right_image)
+
+                    images.append(left_image)
+                    images.append(right_image)
+
+                else:
+                    masks.append(mask)
+
+                    processed_image = cv2.bitwise_and(image, image, mask=mask)
+                    from preprocessing.background_removers import remove_black_margins
+                    processed_image = remove_black_margins(processed_image)
+                    images.append(processed_image)
+                
+                # for mask, processed_image in zip(masks, images):
+                #     import matplotlib.pyplot as plt
+                #     plt.figure(figsize=(12,4))
+                #     plt.subplot(1,3,1)
+                #     plt.title("Original Image")
+                #     plt.imshow(image)
+                #     plt.axis('off')
+                #     plt.subplot(1,3,2)
+                #     plt.title("Ground Truth Mask")
+                #     plt.imshow(mask, cmap='gray')
+                #     plt.axis('off')
+                #     plt.subplot(1,3,3)
+                #     plt.title("Processed Image")
+                #     plt.imshow(processed_image)
+                #     plt.axis('off')
+                #     plt.show()
+            
             # Store the predicted mask for evaluation (query only)
             if dataset_type == "query":
                 predicted_mask = np.concatenate(predicted_masks, axis=1)
@@ -266,8 +324,8 @@ class BackgroundRemovalImageRetrievalSystem:
                 json.dump(bg_removal_metrics, f, indent=2)
             print(f"Background removal metrics saved to: {bg_filepath}")
         
-        # Save masks as PNG files for test datasets (QST2_W2)
-        if dataset_name in ["QST2_W2"] and self.predicted_masks:
+        # Save masks as PNG files for test datasets (QST2_W2, QST2_W3)
+        if dataset_name in ["QST2_W2", "QST2_W3"] and self.predicted_masks:
             self.save_masks_as_png(results_dir)
         
         print(f"Results saved to: {pkl_filepath}")
