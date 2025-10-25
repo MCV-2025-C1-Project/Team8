@@ -26,100 +26,88 @@ def dct_descriptor(img: np.ndarray, n_coefficients: int) -> np.ndarray:
     return np.array(descriptor)
 
 
-def lbp_descriptor(img: np.ndarray, radius: int = 1, n_neighbors: int = 8, lbp_method: str = 'uniform') -> np.ndarray:
+def lbp_descriptor(img: np.ndarray,
+                   radius: int = 1,
+                   n_neighbors: int = 8,
+                   lbp_method: str = 'uniform') -> np.ndarray:
     """
-    Local Binary Pattern (LBP) texture descriptor - optimized version.
-    
-    Args:
-        img: Input image as numpy array
-        radius: Radius of the circle around each pixel (default: 1)
-        n_neighbors: Number of neighbors to sample around each pixel (default: 8)
-        lbp_method: LBP method - 'uniform' or 'nri_uniform' (default: 'uniform')
-    
-    Returns:
-        LBP histogram as numpy array
+    Local Binary Pattern (LBP) texture descriptor - fast & simple.
+    - Vectorized (no Python loops over pixels).
+    - Optional 'nri_uniform' mapping.
     """
-    # Convert to grayscale if needed and resize to default 640x640
-    if len(img.shape) == 3:
+
+    # ---- to grayscale, resize like your original ----
+    if img.ndim == 3:
         img = Image.fromarray(img).convert("L")
     else:
         img = Image.fromarray(img)
-    
     img = img.resize((640, 640), Image.BILINEAR)
-    img = np.array(img, dtype=np.float32)
-    
-    # Get image dimensions
-    height, width = img.shape
-    
-    # Pre-compute sampling coordinates for efficiency
-    angles = np.linspace(0, 2 * np.pi, n_neighbors, endpoint=False)
-    x_offsets = np.round(radius * np.cos(angles)).astype(int)
-    y_offsets = np.round(radius * np.sin(angles)).astype(int)
-    
-    # Initialize LBP image
-    lbp_image = np.zeros((height, width), dtype=np.uint8)
-    
-    # LBP computation with vectorized operations
-    for y in range(radius, height - radius):
-        for x in range(radius, width - radius):
-            center = img[y, x]
-            
-            # Get all neighbors at once using vectorized indexing
-            neighbor_x = x + x_offsets
-            neighbor_y = y + y_offsets
-            
-            # Handle boundary conditions efficiently
-            valid_mask = (neighbor_x >= 0) & (neighbor_x < width) & (neighbor_y >= 0) & (neighbor_y < height)
-            neighbor_values = np.where(valid_mask, 
-                                     img[neighbor_y, neighbor_x], 
-                                     center)
-            
-            # Vectorized comparison and bit conversion
-            binary_pattern = (neighbor_values >= center).astype(int)
-            
-            # Convert to decimal using bit shifting (much faster than string conversion)
-            lbp_value = 0
-            for i, bit in enumerate(binary_pattern):
-                lbp_value += bit * (2 ** (n_neighbors - 1 - i))
-            
-            # Apply uniform pattern reduction if specified
-            if lbp_method == 'uniform':
-                lbp_value = _uniform_pattern_fast(lbp_value, n_neighbors)
-            
-            lbp_image[y, x] = lbp_value
-    
-    # Create histogram
-    if lbp_method == 'uniform':
-        # For uniform patterns, we have n_neighbors + 2 bins (0, 1, ..., n_neighbors, non-uniform)
+    img = np.asarray(img, dtype=np.float32)
+
+    H, W = img.shape
+
+    # ---- precompute integer offsets on circle (same as your rounding) ----
+    angles = np.linspace(0, 2*np.pi, n_neighbors, endpoint=False)
+    dx = np.rint(radius * np.cos(angles)).astype(int)
+    dy = np.rint(radius * np.sin(angles)).astype(int)
+
+    # ---- pad once; slice for each neighbor (fast) ----
+    pad = int(radius) + 1  # safe margin for shifts
+    padded = np.pad(img, pad, mode='edge')
+
+    neighbors = []
+    for k in range(n_neighbors):
+        y0 = pad + dy[k]
+        x0 = pad + dx[k]
+        neigh = padded[y0:y0+H, x0:x0+W]
+        neighbors.append(neigh)
+    neigh_stack = np.stack(neighbors, axis=0)               # (P, H, W)
+
+    # ---- threshold vs center, pack bits to integer code image ----
+    center = img[None, :, :]                                # (1, H, W)
+    bits = (neigh_stack >= center).astype(np.uint32)        # (P, H, W)
+    weights = (1 << np.arange(n_neighbors, dtype=np.uint32))[:, None, None]
+    code_img = (bits * weights).sum(axis=0)                 # (H, W), uint32
+
+    # ---- histogram mapping ----
+    if lbp_method == 'uniform':  # RIU2: map uniform to popcount (0..P), non-uniform -> P+1
         n_bins = n_neighbors + 2
-    else:
-        # For non-uniform patterns, we have 2^n_neighbors bins
-        n_bins = 2 ** n_neighbors
-    
-    histogram, _ = np.histogram(lbp_image.flatten(), bins=n_bins, range=(0, n_bins))
-    
-    # Normalize histogram
-    histogram = histogram.astype(np.float32)
-    histogram = histogram / (np.sum(histogram) + 1e-8)  # Add small epsilon to avoid division by zero
-    
-    return histogram
 
+        lut_size = 1 << n_neighbors
+        codes = np.arange(lut_size, dtype=np.uint32)
 
-def _uniform_pattern_fast(lbp_value: int, n_neighbors: int) -> int:
-    """
-    Fast uniform pattern conversion using bit operations.
-    A uniform pattern is one that has at most 2 transitions between 0 and 1.
-    """
-    # Count transitions using bit operations (much faster than string operations)
-    transitions = 0
-    for i in range(n_neighbors):
-        current_bit = (lbp_value >> (n_neighbors - 1 - i)) & 1
-        next_bit = (lbp_value >> (n_neighbors - 1 - ((i + 1) % n_neighbors))) & 1
-        if current_bit != next_bit:
-            transitions += 1
-    
-    # If more than 2 transitions, it's non-uniform
-    if transitions > 2:
-        return n_neighbors + 1  # Non-uniform pattern bin
+        # bit matrix: columns are bit positions (LSB-first)
+        bm = ((codes[:, None] >> np.arange(n_neighbors, dtype=np.uint32)) & 1).astype(np.uint8)
+        ones = bm.sum(axis=1)
+        # circular transitions
+        trans = (bm[:, :-1] != bm[:, 1:]).sum(axis=1) + (bm[:, -1] != bm[:, 0])
+
+        lut = np.where(trans <= 2, ones, n_neighbors + 1).astype(np.uint16)
+        mapped = lut[code_img]
+        hist, _ = np.histogram(mapped, bins=n_bins, range=(0, n_bins))
+
+    elif lbp_method == 'nri_uniform':
+        # Non-rotation-invariant uniform: unique id per uniform code, last bin for non-uniform
+        lut_size = 1 << n_neighbors
+        codes = np.arange(lut_size, dtype=np.uint32)
+        bm = ((codes[:, None] >> np.arange(n_neighbors, dtype=np.uint32)) & 1).astype(np.uint8)
+        trans = (bm[:, :-1] != bm[:, 1:]).sum(axis=1) + (bm[:, -1] != bm[:, 0])
+
+        uniform_codes = np.where(trans <= 2)[0]
+        U = len(uniform_codes)
+        lut = np.full(lut_size, U, dtype=np.uint16)
+        lut[uniform_codes] = np.arange(U, dtype=np.uint16)
+
+        mapped = lut[code_img]
+        n_bins = U + 1
+        hist, _ = np.histogram(mapped, bins=n_bins, range=(0, n_bins))
+
     else:
-        return lbp_value
+        # raw codes (2^P bins)
+        n_bins = 1 << n_neighbors
+        hist, _ = np.histogram(code_img, bins=n_bins, range=(0, n_bins))
+
+    # ---- normalize ----
+    hist = hist.astype(np.float32)
+    hist /= (hist.sum() + 1e-8)
+    return hist
