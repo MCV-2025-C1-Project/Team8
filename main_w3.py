@@ -40,30 +40,68 @@ def main():
         )
 
     print("\n" + "=" * 60)
-    print("TASK 2: IMAGE RETRIEVAL WITH TEXTURE DESCRIPTORS (QSD1_W3)")
+    print("TASK 2: IMAGE RETRIEVAL WITH TEXTURE DESCRIPTORS IN VALIDATION SET QSD1_W3")
     print("=" * 60 + "\n")
 
-    retrieval_system = ImageRetrievalSystem()
     n_coefficients = 6
     
-    # DCT Results
-    dct_results = retrieval_system.run(
+    print("\nMETHOD 1: DCT with Histogram Equalization (NO NOISE REMOVAL)")
+    print("-" * 50)
+    # Create separate instance for each method to avoid descriptor reuse
+    retrieval_system_1 = ImageRetrievalSystem()
+    # DCT Results with HIST_EQ only
+    dct_hist_eq_results = retrieval_system_1.run(
         method=DescriptorMethod.DCT,
         measure=SimilarityMeasure.HIST_INTERSECT,
         index_dataset=DatasetType.BBDD,
         preprocessing=PreprocessingMethod.HIST_EQ,
         query_dataset=DatasetType.QSD1_W3,
         week_folder=WeekFolder.WEEK_3,
-        save_results=True,
+        save_results=False,
         n_coefficients=n_coefficients,
     )
     
-    print("\nVALIDATION RESULTS (QSD1_W3)")
+    print("\nMETHOD 2: DCT with Median Filter + Histogram Equalization (WITH NOISE REMOVAL)")
+    print("-" * 50)
+    # Create separate instance for each method to avoid descriptor reuse
+    retrieval_system_2 = ImageRetrievalSystem()
+    # DCT Results with MEDIAN_HIST_EQ (noise removal + histogram equalization)
+    dct_median_hist_eq_results = retrieval_system_2.run(
+        method=DescriptorMethod.DCT,
+        measure=SimilarityMeasure.HIST_INTERSECT,
+        index_dataset=DatasetType.BBDD,
+        preprocessing=PreprocessingMethod.MEDIAN_HIST_EQ,
+        query_dataset=DatasetType.QSD1_W3,
+        week_folder=WeekFolder.WEEK_3,
+        save_results=False,
+        n_coefficients=n_coefficients,
+    )
+    
+    print("\nMETHOD 3: HSV_BLOCKS with Median Filter + Histogram Equalization (WITH NOISE REMOVAL)")
+    print("-" * 50)
+    # Create separate instance for each method to avoid descriptor reuse
+    retrieval_system_3 = ImageRetrievalSystem()
+    # HSV_BLOCKS Results with MEDIAN_HIST_EQ (noise removal + histogram equalization)
+    hsv_median_hist_eq_results = retrieval_system_3.run(
+        method=DescriptorMethod.HSV_BLOCKS,
+        ns_blocks=[4, 6],
+        measure=SimilarityMeasure.HIST_INTERSECT,
+        index_dataset=DatasetType.BBDD,
+        preprocessing=PreprocessingMethod.MEDIAN_HIST_EQ,
+        query_dataset=DatasetType.QSD1_W3,
+        week_folder=WeekFolder.WEEK_3,
+        save_results=False,
+        bins=32,
+    )
+    
+    print("\nTASK 2: VALIDATION RESULTS (QSD1_W3)")
     print("-" * 30)
-    print(f"DCT:         mAP@1={dct_results.get('mAP@1', float('nan')):.3f}, mAP@5={dct_results.get('mAP@5', float('nan')):.3f}, n_coefficients={n_coefficients}")
-
+    print(f"METHOD 1 (DCT + HIST_EQ):     mAP@1={dct_hist_eq_results.get('mAP@1', float('nan')):.3f}, mAP@5={dct_hist_eq_results.get('mAP@5', float('nan')):.3f}, n_coefficients={n_coefficients}")
+    print(f"METHOD 2 (DCT + MEDIAN + HIST): mAP@1={dct_median_hist_eq_results.get('mAP@1', float('nan')):.3f}, mAP@5={dct_median_hist_eq_results.get('mAP@5', float('nan')):.3f}, n_coefficients={n_coefficients}")
+    print(f"METHOD 3 (HSV_BLOCKS + MEDIAN + HIST): mAP@1={hsv_median_hist_eq_results.get('mAP@1', float('nan')):.3f}, mAP@5={hsv_median_hist_eq_results.get('mAP@5', float('nan')):.3f}, ns_blocks=[4,6]")
+    
     print("\n" + "=" * 60)
-    print("TASK 3: MULTIPLE IMAGE RETRIEVAL WITH BACKGROUND REMOVAL (QSD2_W3)")
+    print("TASK 3: MULTIPLE IMAGE RETRIEVAL WITH BACKGROUND REMOVAL IN VALIDATION SET QSD2_W3")
     print("=" * 60)
 
     bg_retrieval_system = BackgroundRemovalImageRetrievalSystem()
@@ -77,14 +115,14 @@ def main():
         index_dataset=DatasetType.BBDD,
         query_dataset=DatasetType.QSD2_W3,
         week_folder=WeekFolder.WEEK_3,
-        save_results=True,
+        save_results=False,
         preprocessing=PreprocessingMethod.HIST_EQ,
 
         background_remover=PreprocessingMethod.BG_KMEANS,
         subdivide=True,
     )
 
-    print("\nVALIDATION RESULTS (QSD2_W3)")
+    print("\nTASK 3: VALIDATION RESULTS (QSD2_W3)")
     print("-" * 30)
     if 'mAP@1' in k_means_results and 'mAP@5' in k_means_results:
         print(f"K-Means RETRIEVAL PERFORMANCE:")

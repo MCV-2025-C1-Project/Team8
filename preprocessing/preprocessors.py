@@ -1,6 +1,4 @@
 import numpy as np
-import cv2
-from typing import Tuple, Callable
 from enum import Enum
 from preprocessing.color_adjustments import (
     apply_histogram_equalization,
@@ -29,6 +27,9 @@ class PreprocessingMethod(Enum):
     GAUSSIAN = "gaussian"
     MEDIAN = "median"
     
+    # Combined preprocessing methods
+    MEDIAN_HIST_EQ = "median_hist_eq"
+    
     # Background removal methods
     BG_KMEANS = "bg_kmeans"
     BG_RECTANGLES = "bg_rectangles"
@@ -52,6 +53,11 @@ class PreprocessingMethod(Enum):
         elif self == PreprocessingMethod.MEDIAN:
             kernel_size = kwargs.get('kernel_size', 3)
             return apply_median_filter(img, kernel_size)
+        elif self == PreprocessingMethod.MEDIAN_HIST_EQ:
+            # Apply median filter first for noise removal, then histogram equalization
+            kernel_size = kwargs.get('kernel_size', 3)
+            denoised = apply_median_filter(img, kernel_size)
+            return apply_histogram_equalization(denoised)
         elif self == PreprocessingMethod.BG_KMEANS:
             k = kwargs.get('k', 5)
             margin = kwargs.get('margin', 45)
@@ -79,7 +85,7 @@ class PreprocessingMethod(Enum):
     @property
     def is_color_adjustment(self) -> bool:
         """Check if this is a color adjustment method."""
-        return self.value in ["gamma", "hist_eq", "gaussian", "median"]
+        return self.value in ["gamma", "hist_eq", "gaussian", "median", "median_hist_eq"]
     
     @property
     def is_no_preprocessing(self) -> bool:
