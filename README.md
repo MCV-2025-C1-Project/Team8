@@ -45,6 +45,17 @@ python main_w2.py
 2. **Validation Phase 2**: Tests K-Means background removal + HSV Block Histograms on QSD2_W2 → BBDD
 3. **Test Phase**: Tests HSV Block Histograms on QST1_W2 and QST2_W2 (with background removal)
 
+### Week 3 - Noise Filtering and Multiple Paintings Detection
+```bash
+python main_w3.py
+```
+
+**What it does:**
+1. **Task 1**: Noise filtering assessment on QSD1_W3 (average, Gaussian, median filters)
+2. **Task 2**: DCT and HSV Block descriptors with noise removal on QSD1_W3 → BBDD
+3. **Task 3**: Multiple paintings detection with background removal on QSD2_W3 → BBDD
+4. **Test Phase**: DCT descriptor on QST1_W3 and multiple paintings on QST2_W3
+
 ## 📁 Project Structure
 
 ```
@@ -72,6 +83,7 @@ Team8/
 │   └── spatial.py               # Spatial processing
 ├── main_w1.py                    # Week 1 experiments
 ├── main_w2.py                    # Week 2 experiments
+├── main_w3.py                    # Week 3 experiments
 ├── requirements.txt              # Dependencies
 └── README.md                     # This file
 ```
@@ -116,6 +128,12 @@ results/
         └── method_hsv_blocks_kmeans/
             ├── result.pkl
             └── 00000.png, 00001.png, ...  # Predicted masks
+└── week_3/
+    ├── QST1_W3/                  # Test results (DCT)
+    └── QST2_W3/                  # Test results (multiple paintings)
+        └── method_hsv_blocks_kmeans/
+            ├── result.pkl
+            └── 00000.png, 00001.png, ...  # Predicted masks
 ```
 
 ## 🎯 Key Features
@@ -130,6 +148,13 @@ results/
 - **Background removal**: K-Means clustering for QSD2_W2 and QST2_W2
 - **Dual evaluation**: Both retrieval performance and background removal quality
 - **Multiple datasets**: QSD1_W1, QSD2_W2, QST1_W2, QST2_W2
+
+### Week 3 Features
+- **Noise filtering**: Average, Gaussian, and median filters for noisy images
+- **DCT descriptors**: Discrete Cosine Transform with configurable coefficients
+- **Multiple paintings detection**: Handles up to 2 paintings per image
+- **Advanced preprocessing**: Noise removal + histogram equalization combinations
+- **Comprehensive evaluation**: Noise filtering quality, retrieval performance, and background removal
 
 ## 🔍 Understanding the Results
 

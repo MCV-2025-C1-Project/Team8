@@ -110,7 +110,6 @@ def main():
     k_means_results = bg_retrieval_system.run(
         method=DescriptorMethod.HSV_BLOCKS,
         ns_blocks=[4, 6],
-
         measure=SimilarityMeasure.HIST_INTERSECT,
         index_dataset=DatasetType.BBDD,
         query_dataset=DatasetType.QSD2_W3,
@@ -138,7 +137,23 @@ def main():
     print("TEST PHASE: IMAGE RETRIEVAL ON TEST DATASETS")
     print("=" * 60)
 
-    print("\nTEST 2: QST2_W2 (WITH BACKGROUND REMOVAL)")
+    print("\nTEST 1: QST1_W3 (DCT WITH HISTOGRAM EQUALIZATION)")
+    print("-" * 50)
+    
+    test_retrieval_system_1 = ImageRetrievalSystem()
+    # DCT Results with HIST_EQ only (same as Method 1 from Task 2)
+    test_dct_hist_eq_results = test_retrieval_system_1.run(
+        method=DescriptorMethod.DCT,
+        measure=SimilarityMeasure.HIST_INTERSECT,
+        index_dataset=DatasetType.BBDD,
+        preprocessing=PreprocessingMethod.HIST_EQ,
+        query_dataset=DatasetType.QST1_W3,
+        week_folder=WeekFolder.WEEK_3,
+        save_results=True,
+        n_coefficients=n_coefficients,
+    )
+
+    print("\nTEST 2: QST2_W3 (WITH BACKGROUND REMOVAL)")
     print("-" * 40)
 
     k_means_results = bg_retrieval_system.run(
@@ -152,7 +167,6 @@ def main():
         save_results=True,
         preprocessing=PreprocessingMethod.HIST_EQ,
         evaluate_bg_removal=False,  # No ground truth for evaluation
-
         background_remover=PreprocessingMethod.BG_KMEANS,
         subdivide=True,
         # visualise=True

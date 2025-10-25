@@ -15,6 +15,7 @@ class DatasetType(Enum):
     QST2_W2 = "qst2_w2"
     QSD1_W3 = "qsd1_w3"
     QSD2_W3 = "qsd2_w3"
+    QST1_W3 = "qst1_w3"
     QST2_W3 = "qst2_w3"
 
 
@@ -63,6 +64,8 @@ class DataLoader:
             self.load_qsd1_w3()
         elif dataset == DatasetType.QSD2_W3:
             self.load_qsd2_w3()
+        elif dataset == DatasetType.QST1_W3:
+            self.load_qst1_w3()
         elif dataset == DatasetType.QST2_W3:
             self.load_qst2_w3()
 
@@ -541,6 +544,43 @@ class DataLoader:
             raise Exception(f"Error reading qst2_w3 directory: {e}")
 
         print(f"Successfully loaded {len(self.data)} images from qst2_w3 dataset")
+
+    def load_qst1_w3(self) -> None:
+        """Load qst1_w3 dataset: JPG images."""
+        dataset_path = os.path.join(self.data_path, "qst1_w3")
+
+        if not os.path.exists(dataset_path):
+            raise FileNotFoundError(f"qst1_w3 dataset path not found: {dataset_path}")
+
+        try:
+            files = [
+                f
+                for f in os.listdir(dataset_path)
+                if f.endswith(".jpg") and os.path.isfile(os.path.join(dataset_path, f))
+            ]
+
+            for filename in files:
+                try:
+                    name_without_ext = filename.split(".")[0]
+                    image_id = int(name_without_ext)
+
+                    jpg_filename = os.path.join(dataset_path, filename)
+                    image = np.array(Image.open(jpg_filename))
+
+                    self.data[image_id] = {
+                        "image": image,
+                        "info": f"Query image {name_without_ext}",
+                        "relationship": None,
+                    }
+
+                except Exception as e:
+                    print(f"Warning: Error processing {filename}: {e}")
+                    continue
+
+        except Exception as e:
+            raise Exception(f"Error reading qst1_w3 directory: {e}")
+
+        print(f"Successfully loaded {len(self.data)} images from qst1_w3 dataset")
 
     def clear_dataset(self) -> None:
         self.data = {}
