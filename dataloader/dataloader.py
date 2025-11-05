@@ -17,16 +17,18 @@ class DatasetType(Enum):
     QSD2_W3 = "qsd2_w3"
     QST1_W3 = "qst1_w3"
     QST2_W3 = "qst2_w3"
+    QSD1_W4 = "qsd1_w4"
 
 
 class WeekFolder(Enum):
     WEEK_1 = "week_1"
     WEEK_2 = "week_2"
     WEEK_3 = "week_3"
+    WEEK_4 = "week_4"
 
 
 class DataLoader:
-    """Load and manage BBDD and qsd1_w1 computer vision datasets."""
+    """Load and manage BBDD and qsd*_w* computer vision datasets."""
 
     def __init__(self):
         current_file = os.path.abspath(__file__)
@@ -62,6 +64,8 @@ class DataLoader:
             self.load_qst2_w2()
         elif dataset == DatasetType.QSD1_W3:
             self.load_qsd1_w3()
+        elif dataset == DatasetType.QSD1_W4:
+            self.load_qsd1_w4()
         elif dataset == DatasetType.QSD2_W3:
             self.load_qsd2_w3()
         elif dataset == DatasetType.QST1_W3:
@@ -309,6 +313,66 @@ class DataLoader:
 
         if not os.path.exists(dataset_path):
             raise FileNotFoundError(f"qsd1_w3 dataset path not found: {dataset_path}")
+
+        gt_file = os.path.join(dataset_path, "gt_corresps.pkl")
+        gt_correspondences = []
+
+        if os.path.exists(gt_file):
+            try:
+                with open(gt_file, "rb") as f:
+                    gt_correspondences = pickle.load(f)
+            except Exception as e:
+                print(f"Warning: Error loading ground truth correspondences: {e}")
+
+        try:
+            files = [
+                f
+                for f in os.listdir(dataset_path)
+                if f.endswith(".jpg") and os.path.isfile(os.path.join(dataset_path, f))
+            ]
+
+            for filename in files:
+                try:
+                    name_without_ext = filename.split(".")[0]
+                    image_id = int(name_without_ext)
+
+                    jpg_filename = os.path.join(dataset_path, filename)
+                    non_augm_jpg_filename = os.path.join(dataset_path, "non_augmented", filename)
+                    image = np.array(Image.open(jpg_filename))
+                    non_augm_image = np.array(Image.open(non_augm_jpg_filename))
+
+                    gt_correspondence = (
+                        gt_correspondences[image_id]
+                        if image_id < len(gt_correspondences)
+                        else None
+                    )
+
+                    txt_filename = os.path.join(dataset_path, f"{name_without_ext}.txt")
+                    with open(txt_filename, "r", encoding="utf-8", errors="ignore") as f:
+                        info = f.readline().strip()
+
+                    self.data[image_id] = {
+                        "image": image,
+                        "non_augm_image": non_augm_image,
+                        "info": info,
+                        "relationship": gt_correspondence,
+                    }
+
+                except Exception as e:
+                    print(f"Warning: Error processing {filename}: {e}")
+                    continue
+
+        except Exception as e:
+            raise Exception(f"Error reading qsd1_w3 directory: {e}")
+
+        print(f"Successfully loaded {len(self.data)} images from qsd1_w3 dataset")
+
+    def load_qsd1_w4(self) -> None:
+        """Load qsd1_w4 dataset: JPG images, non-augmented JPG images and gt_corresps.pkl."""
+        dataset_path = os.path.join(self.data_path, "qsd1_w4")
+
+        if not os.path.exists(dataset_path):
+            raise FileNotFoundError(f"qsd1_w4 dataset path not found: {dataset_path}")
 
         gt_file = os.path.join(dataset_path, "gt_corresps.pkl")
         gt_correspondences = []
