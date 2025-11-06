@@ -111,18 +111,22 @@ class KeyPointImageRetrievalSystem:
             if H is None:
                 continue
             n_inliers = int(mask.sum())
+            matches_mask = mask.ravel().tolist()
+            score = sum(matches_mask) / len(good_matches)
 
             # Keep results
             results.append({
                 "image_id": image_id,
                 "num_good_matches": len(good_matches),
                 "n_inliers": n_inliers,
+                "score": score,
                 "homography": H,
                 "good_matches": good_matches,
             })
 
-        # TODO: per cada imatge, retornar els "n" matches o retornar [-1] si
-        # es considera que no en té cap (retornar llista de llistes)
+        # TODO: per cada imatge, en funció dels results, retornar els "n"
+        # matches o retornar [-1] si es considera que no en té cap
+        # (s'ha de retornar llista de llistes)
 
     def run(
         self,
