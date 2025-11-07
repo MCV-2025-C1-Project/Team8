@@ -1,5 +1,5 @@
 """
-Keypoint descriptor implementations.
+you haKeypoint descriptor implementations.
 https://amroamroamro.github.io/mexopencv/matlab/cv.ORB.detectAndCompute.html
 """
 import cv2 as cv
@@ -25,3 +25,22 @@ def orb_descriptor(img, nfeatures=500):
     keypoints, descriptors = orb.detectAndCompute(img, None)
     return keypoints, descriptors
 
+
+def sift_descriptor(img, nfeatures=500):
+    """
+    Compute SIFT keypoints and descriptors.
+
+    SIFT produces float32 descriptors that capture gradient distributions around
+    each keypoint, which typically match best with L2 distance.
+    """
+    if hasattr(cv, "SIFT_create"):
+        sift = cv.SIFT_create(
+            nfeatures=nfeatures
+        )
+    else:
+        # Fall back to xfeatures2d module if the build does not expose SIFT at the top-level
+        sift = cv.xfeatures2d.SIFT_create(
+            nfeatures=nfeatures
+        )
+    keypoints, descriptors = sift.detectAndCompute(img, None)
+    return keypoints, descriptors

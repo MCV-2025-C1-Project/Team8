@@ -15,6 +15,9 @@ def main():
     print("\n" + "=" * 60)
     print("TASK 3: KEYPOINT DESCRIPTOR IMAGE RETRIEVAL SYSTEM")
     print("=" * 60)
+    
+    print("\nTEST 1: QSD1_W4 (ORB DESCRIPTOR)")
+    print("-" * 40)
 
     retrieval_system = KeyPointImageRetrievalSystem()
     retrieval_system.run(
@@ -25,8 +28,21 @@ def main():
         save_results=True,
         preprocessing=PreprocessingMethod.GAMMA,
         gamma=0.9,  # or try 1.2 for brighter
-        similarity_metric=cv.NORM_HAMMING,  # Options: cv.NORM_HAMMING, cv.NORM_HAMMING2, cv.NORM_L1, cv.NORM_L2
+        similarity_metric=cv.NORM_HAMMING, 
         ratio_threshold=0.60, 
+    )
+    
+    print("\nTEST 2: QSD1_W4 (SIFT DESCRIPTOR)")
+    print("-" * 40)
+
+    retrieval_system.run(
+        local_descriptor_method=DescriptorMethod.SIFT,
+        index_dataset=DatasetType.BBDD,
+        query_dataset=DatasetType.QSD1_W4,
+        week_folder=WeekFolder.WEEK_4,
+        save_results=True,
+        preprocessing=PreprocessingMethod.GAMMA,
+        ratio_threshold=0.50,
     )
 
 

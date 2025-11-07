@@ -98,7 +98,7 @@ def optimize_ratio_threshold(
         ratio_thresholds = np.arange(0.5, 0.9, 0.05).round(2).tolist()
     
     print("=" * 70)
-    print(f"OPTIMIZING RATIO_THRESHOLD FOR {metric.upper()}")
+    print(f"OPTIMIZING RATIO_THRESHOLD FOR {metric.upper()} FOR {local_descriptor_method.name} DESCRIPTOR")
     print("=" * 70)
     print(f"Testing {len(ratio_thresholds)} values: {ratio_thresholds}")
     print()
@@ -215,7 +215,7 @@ def optimize_ratio_threshold(
 
 if __name__ == "__main__":
     # Optimize for F1@5 (recommended for balanced precision/recall)
-    results = optimize_ratio_threshold(
+    results_orb = optimize_ratio_threshold(
         ratio_thresholds=None,  # Will use default range [0.5, 0.9] in steps of 0.05
         index_dataset=DatasetType.BBDD,
         query_dataset=DatasetType.QSD1_W4,
@@ -228,8 +228,22 @@ if __name__ == "__main__":
         k=5,
     )
     
+    results_sift = optimize_ratio_threshold(
+        ratio_thresholds=None,  # Will use default range [0.5, 0.9] in steps of 0.05
+        index_dataset=DatasetType.BBDD,
+        query_dataset=DatasetType.QSD1_W4,
+        local_descriptor_method=DescriptorMethod.SIFT,
+        preprocessing=PreprocessingMethod.GAMMA,
+        gamma=0.9,
+        similarity_metric=cv.NORM_L2,
+        min_matches=10,
+        metric="f1@5",  # Optimize for F1@5
+        k=5,
+    )
+    
     print("\n" + "=" * 70)
     print("OPTIMIZATION COMPLETE")
     print("=" * 70)
-    print(f"Use ratio_threshold={results['best_ratio_threshold']:.2f} in main_w4.py")
+    print(f"Use ratio_threshold={results_orb['best_ratio_threshold']:.2f} in main_w4.py")
+    print(f"Use ratio_threshold={results_sift['best_ratio_threshold']:.2f} in main_w4.py")
 
