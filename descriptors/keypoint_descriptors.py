@@ -1,4 +1,5 @@
 """
+Keypoint descriptor implementations.
 https://amroamroamro.github.io/mexopencv/matlab/cv.ORB.detectAndCompute.html
 """
 import cv2 as cv
@@ -6,6 +7,8 @@ import cv2 as cv
 
 def orb_descriptor(img, nfeatures=500):
     """
+    Compute ORB keypoints and descriptors.
+    
     Returns:
         keypoints The detected keypoints. A 1-by-N structure array with the following fields:
             pt coordinates of the keypoint [x,y]
@@ -21,3 +24,4 @@ def orb_descriptor(img, nfeatures=500):
     )
     keypoints, descriptors = orb.detectAndCompute(img, None)
     return keypoints, descriptors
+

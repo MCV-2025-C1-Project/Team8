@@ -44,7 +44,7 @@ class DataLoader:
         if self.dataset_type is None:
             return False
         # Only validation datasets have ground truth, test datasets (QST*) do not
-        return self.dataset_type in [DatasetType.BBDD, DatasetType.QSD1_W1, DatasetType.QSD2_W2, DatasetType.QSD1_W3, DatasetType.QSD2_W3]
+        return self.dataset_type in [DatasetType.BBDD, DatasetType.QSD1_W1, DatasetType.QSD2_W2, DatasetType.QSD1_W3, DatasetType.QSD2_W3, DatasetType.QSD1_W4]
 
     def load_dataset(self, dataset: DatasetType) -> None:
         """Load dataset by DatasetType enum."""
@@ -425,7 +425,7 @@ class DataLoader:
         except Exception as e:
             raise Exception(f"Error reading qsd1_w3 directory: {e}")
 
-        print(f"Successfully loaded {len(self.data)} images from qsd1_w3 dataset")
+        print(f"Successfully loaded {len(self.data)} images from qsd1_w4 dataset")
 
     def load_qsd2_w3(self) -> None:
         """Load qsd2_w3 dataset: JPG images, non-augmented JPG images and gt_corresps.pkl. (PNG and TXT files ignored)"""

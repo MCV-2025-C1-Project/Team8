@@ -5,6 +5,7 @@ from descriptors.color_histograms import histogram_grayscale, histogram_rgb, his
 from descriptors.spatial_histograms import block_histogram, spatial_pyramid_histogram
 from descriptors.texture_descriptors import dct_descriptor, lbp_descriptor
 from descriptors.three_d_histograms import three_d_histogram
+from descriptors.keypoint_descriptors import orb_descriptor
 
 
 class DescriptorMethod(Enum):
@@ -34,6 +35,9 @@ class DescriptorMethod(Enum):
     # Texture descriptors
     DCT = "dct"
     LBP = "lbp"
+    
+    # Keypoint descriptors
+    ORB = "orb"
     
     def _get_base_color_function(self):
         """Get the base color histogram function for spatial methods."""        
@@ -103,6 +107,11 @@ class DescriptorMethod(Enum):
                     n_neighbors=preprocessing_kwargs.get("n_neighbors", 8),
                     lbp_method=preprocessing_kwargs.get("lbp_method", "uniform")
                 )
+        
+        elif self.is_keypoint_descriptor:
+            if self == DescriptorMethod.ORB:
+                nfeatures = preprocessing_kwargs.get("nfeatures", 500)
+                return orb_descriptor(img, nfeatures=nfeatures)
 
         else:
             raise ValueError(f"Unknown descriptor method: {self}")
@@ -134,6 +143,10 @@ class DescriptorMethod(Enum):
     @property
     def is_texture_descriptor(self) -> bool:
         return self.value in ["dct", "lbp"]
+    
+    @property
+    def is_keypoint_descriptor(self) -> bool:
+        return self.value in ["orb"]
     
     @property
     def base_color_method(self) -> str:
