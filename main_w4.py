@@ -13,10 +13,10 @@ def main():
     print("=" * 9)
 
     print("\n" + "=" * 60)
-    print("TASK 3: KEYPOINT DESCRIPTOR IMAGE RETRIEVAL SYSTEM")
+    print("TASK 3: KEYPOINT DESCRIPTOR IMAGE RETRIEVAL SYSTEM IN VALIDATION SET QSD1_W4")
     print("=" * 60)
     
-    print("\nTEST 1: QSD1_W4 (ORB DESCRIPTOR)")
+    print("\nMETHOD 1: QSD1_W4 (ORB DESCRIPTOR)")
     print("-" * 40)
 
     retrieval_system = KeyPointImageRetrievalSystem()
@@ -32,7 +32,7 @@ def main():
         ratio_threshold=0.60, 
     )
     
-    print("\nTEST 2: QSD1_W4 (SIFT DESCRIPTOR)")
+    print("\nMETHOD 2: QSD1_W4 (SIFT DESCRIPTOR)")
     print("-" * 40)
 
     retrieval_system.run(
@@ -41,11 +41,27 @@ def main():
         query_dataset=DatasetType.QSD1_W4,
         week_folder=WeekFolder.WEEK_4,
         save_results=True,
-        preprocessing=PreprocessingMethod.GAMMA,
+        similarity_metric=cv.NORM_L2,
         ratio_threshold=0.50,
     )
 
 
+    print("\n" + "=" * 60)
+    print("TASK 4: KEYPOINT DESCRIPTOR IMAGE RETRIEVAL SYSTEM IN TEST SET QST1_W4")
+    print("=" * 60)
+    
+    print("\n BEST PERFORMING METHOD IN VALIDATION SET: SIFT DESCRIPTOR")
+    print("-" * 40)
+
+    retrieval_system.run(
+        local_descriptor_method=DescriptorMethod.SIFT,
+        index_dataset=DatasetType.BBDD,
+        query_dataset=DatasetType.QST1_W4,
+        week_folder=WeekFolder.WEEK_4,
+        save_results=True,
+        similarity_metric=cv.NORM_L2,
+        ratio_threshold=0.50,
+    )
 
 if __name__ == "__main__":
     main()
