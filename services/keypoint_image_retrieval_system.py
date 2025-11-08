@@ -285,11 +285,10 @@ class KeyPointImageRetrievalSystem:
         # Evaluate if ground truth is available
         metrics = None
         if self.query_dataset.has_ground_truth() and len(self.ground_truth) > 0:
-            map_at_1 = self.evaluate_map_at_k(predictions, k=1)
-            map_at_5 = self.evaluate_map_at_k(predictions, k=5)
-            metrics = {"mAP@1": map_at_1, "mAP@5": map_at_5}
-            print(f"mAP@1: {map_at_1:.4f}, mAP@5: {map_at_5:.4f}")
-        
+            map_at_1 = self.evaluate_map_at_k(predictions, k=2)
+            metrics = {"mAP@1": map_at_1}
+            print(f"mAP@1: {map_at_1:.4f}")
+
         # Save results if requested
         if save_results:
             self.save_results(
