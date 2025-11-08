@@ -37,7 +37,7 @@ class KeyPointImageRetrievalSystem:
 
     def compute_keypoint_descriptors(
         self, 
-        method,
+        method: DescriptorMethod,
         preprocessing: PreprocessingMethod = PreprocessingMethod.NONE,
         **preprocessing_kwargs
     ):
@@ -213,7 +213,7 @@ class KeyPointImageRetrievalSystem:
     
     def run(
         self,
-        local_descriptor_method,
+        local_descriptor_method: DescriptorMethod,
         index_dataset: DatasetType,
         query_dataset: DatasetType,
         week_folder: WeekFolder,
@@ -259,7 +259,7 @@ class KeyPointImageRetrievalSystem:
             matches = self.retrieve(
                 query_keypoints=image_kp,
                 query_descriptors=image_dsc,
-                n=10,  # Use K=10 for competition format
+                n=2,  # Use K=10 for competition format
                 norm_type=similarity_metric,
                 ratio_threshold=ratio_threshold,
                 min_matches=min_matches,
