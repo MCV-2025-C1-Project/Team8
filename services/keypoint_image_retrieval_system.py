@@ -289,10 +289,12 @@ class KeyPointImageRetrievalSystem:
             metrics = {"mAP@1": map_at_1}
             print(f"mAP@1: {map_at_1:.4f}")
 
+        predictions_as_single_item_lists = [[[x] for x in sublist] for sublist in predictions]
+
         # Save results if requested
         if save_results:
             self.save_results(
-                predictions,
+                predictions_as_single_item_lists,
                 local_descriptor_method,
                 week_folder,
                 metrics
