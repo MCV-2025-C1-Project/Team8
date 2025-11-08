@@ -156,17 +156,31 @@ class KeyPointImageRetrievalSystem:
                 "score": score,
                 "homography": H,
                 "good_matches": good_matches,
+                "centroid": np.mean(src_pts, axis=0).flatten().tolist(),
             })
 
         # Sort results by score (descending) - higher score = better match
         results.sort(key=lambda x: x["score"], reverse=True)
+        results = results[:n]  # Keep top n results
         
         # Return top n image IDs, or [-1] if no matches found
         if len(results) == 0:
             return [-1]
         
+        # If 2 images, sort them by position of centroid (left to right / top to bottom)
+        if len(results) == 2:
+            x_diff = abs(results[0]["centroid"][0] - results[1]["centroid"][0])
+            y_diff = abs(results[0]["centroid"][1] - results[1]["centroid"][1])
+            if x_diff >= y_diff:
+                # Sort by x coordinate
+                results.sort(key=lambda x: x["centroid"][0])
+            else:
+                # Sort by y coordinate
+                results.sort(key=lambda x: x["centroid"][1])
+        
         # Return top n image IDs
-        top_n_ids = [result["image_id"] for result in results[:n]]
+        top_n_ids = [result["image_id"] for result in results]
+
         return top_n_ids
     
     def evaluate_map_at_k(self, predictions: List[List[int]], k: int) -> float:
