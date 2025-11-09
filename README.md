@@ -56,6 +56,18 @@ python main_w3.py
 3. **Task 3**: Multiple paintings detection with background removal on QSD2_W3 → BBDD
 4. **Test Phase**: DCT descriptor on QST1_W3 and multiple paintings on QST2_W3
 
+
+### Week 4 - Keypoint Detection with Local Descriptors Retrieval
+```bash
+python main_w4.py
+```
+**What it does:**
+1. **Task 1**: Keypoint detection + ORB and SIFT local descriptors
+2. **Task 2**: Find matches, filter them applying a tuned Lowe's ratio, 
+3. **Task 3**: Multiple painting retrieval (+unknowns) on QSD1_W4 → BBDD
+4. **Test Phase**: Multiple painting retrieval (+unknowns) on QST1_W4 → BBDD
+
+
 ## 📁 Project Structure
 
 ```
@@ -155,6 +167,14 @@ results/
 - **Multiple paintings detection**: Handles up to 2 paintings per image
 - **Advanced preprocessing**: Noise removal + histogram equalization combinations
 - **Comprehensive evaluation**: Noise filtering quality, retrieval performance, and background removal
+
+### Week 4 Features
+- **Keypoint detection + local descriptors**: ORB and SIFT
+- **Noise detection**: removal of noise only to those images that have some
+- **Intial brute-force keypoint matching**: using KNN matching
+- **First filtering stage**: Keep good matches with Lowe's ratio test
+- **Second filtering stage**: Keep matches that define a Homography
+- **Retrieval system evaluation**
 
 ## 🔍 Understanding the Results
 
