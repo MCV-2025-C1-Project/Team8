@@ -53,10 +53,11 @@ class DescriptorMethod(Enum):
         else:
             raise ValueError(f"Unknown color method in: {self.value}")
     
+
     def compute(
-        self, 
-        img, 
-        bins: int = 256, 
+        self,
+        img,
+        bins: int = 256,
         preprocessing: PreprocessingMethod = PreprocessingMethod.NONE,
         # Spatial parameters
         ns_blocks: List[int] = None,
@@ -64,10 +65,19 @@ class DescriptorMethod(Enum):
         **preprocessing_kwargs
     ):
         """Compute the descriptor for the given image with optional preprocessing."""
-        
-        if preprocessing != PreprocessingMethod.NONE:
+        from preprocessing.noise_detector import is_noisy
+
+        # Special logic: only apply noise reduction preprocessing if image is noisy and descriptor is keypoint
+        if (
+            preprocessing != PreprocessingMethod.NONE
+            and preprocessing.is_noise_reduction
+            and self.is_keypoint_descriptor
+        ):
+            if is_noisy(img):
+                img = preprocessing.apply(img, **preprocessing_kwargs)
+        elif preprocessing != PreprocessingMethod.NONE:
             img = preprocessing.apply(img, **preprocessing_kwargs)
-        
+
         # Simple color histograms - delegate to color_histograms module
         if self.is_color_only:
             # Map to color function

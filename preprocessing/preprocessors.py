@@ -88,6 +88,11 @@ class PreprocessingMethod(Enum):
         return self.value in ["gamma", "hist_eq", "gaussian", "median", "median_hist_eq"]
     
     @property
+    def is_noise_reduction(self) -> bool:
+        """Check if this is a noise reduction method."""
+        return self.value in ["average", "gaussian", "median"]
+    
+    @property
     def is_no_preprocessing(self) -> bool:
         """Check if this is no preprocessing."""
         return self.value == "none"

@@ -26,10 +26,9 @@ def main():
         query_dataset=DatasetType.QSD1_W4,
         week_folder=WeekFolder.WEEK_4,
         save_results=True,
-        preprocessing=PreprocessingMethod.GAMMA,
-        gamma=0.9,  # or try 1.2 for brighter
+        preprocessing=PreprocessingMethod.MEDIAN,
         similarity_metric=cv.NORM_HAMMING, 
-        ratio_threshold=0.60, 
+        ratio_threshold=0.65, 
     )
     
     print("\nMETHOD 2: QSD1_W4 (SIFT DESCRIPTOR)")
@@ -41,8 +40,9 @@ def main():
         query_dataset=DatasetType.QSD1_W4,
         week_folder=WeekFolder.WEEK_4,
         save_results=True,
+        preprocessing=PreprocessingMethod.GAUSSIAN,
         similarity_metric=cv.NORM_L2,
-        ratio_threshold=0.50,
+        ratio_threshold=0.45,
     )
 
 
@@ -59,8 +59,9 @@ def main():
         query_dataset=DatasetType.QST1_W4,
         week_folder=WeekFolder.WEEK_4,
         save_results=True,
+        preprocessing=PreprocessingMethod.GAUSSIAN,
         similarity_metric=cv.NORM_L2,
-        ratio_threshold=0.50,
+        ratio_threshold=0.45,
     )
 
 if __name__ == "__main__":

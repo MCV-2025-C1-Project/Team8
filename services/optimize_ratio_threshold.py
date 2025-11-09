@@ -75,8 +75,7 @@ def optimize_ratio_threshold(
     index_dataset: DatasetType = DatasetType.BBDD,
     query_dataset: DatasetType = DatasetType.QSD1_W4,
     local_descriptor_method: DescriptorMethod = DescriptorMethod.ORB,
-    preprocessing: PreprocessingMethod = PreprocessingMethod.GAMMA,
-    gamma: float = 0.9,
+    preprocessing: PreprocessingMethod = PreprocessingMethod.NONE,
     similarity_metric = cv.NORM_HAMMING,
     min_matches: int = 10,
     metric: str = "f1@5",  # Options: "f1@5", "f1@1", "map@5", "map@1"
@@ -94,8 +93,8 @@ def optimize_ratio_threshold(
         Dictionary with optimal ratio_threshold and all results
     """
     if ratio_thresholds is None:
-        # Default range: 0.5 to 0.85 in steps of 0.05
-        ratio_thresholds = np.arange(0.5, 0.9, 0.05).round(2).tolist()
+        # Default range: 0.4 to 0.85 in steps of 0.05
+        ratio_thresholds = np.arange(0.40, 0.85, 0.05).round(2).tolist()
     
     print("=" * 70)
     print(f"OPTIMIZING RATIO_THRESHOLD FOR {metric.upper()} FOR {local_descriptor_method.name} DESCRIPTOR")
@@ -115,8 +114,7 @@ def optimize_ratio_threshold(
     # Compute descriptors once (this is the expensive part)
     retrieval_system.compute_keypoint_descriptors(
         local_descriptor_method,
-        preprocessing=preprocessing,
-        gamma=gamma,
+        preprocessing
     )
     
     ground_truth = retrieval_system.ground_truth
@@ -216,12 +214,10 @@ def optimize_ratio_threshold(
 if __name__ == "__main__":
     # Optimize for F1@5 (recommended for balanced precision/recall)
     results_orb = optimize_ratio_threshold(
-        ratio_thresholds=None,  # Will use default range [0.5, 0.9] in steps of 0.05
+        ratio_thresholds=None,  # Will use default range [0.4, 0.85] in steps of 0.05
         index_dataset=DatasetType.BBDD,
         query_dataset=DatasetType.QSD1_W4,
         local_descriptor_method=DescriptorMethod.ORB,
-        preprocessing=PreprocessingMethod.GAMMA,
-        gamma=0.9,
         similarity_metric=cv.NORM_HAMMING,
         min_matches=10,
         metric="f1@5",  # Optimize for F1@5
@@ -229,12 +225,10 @@ if __name__ == "__main__":
     )
     
     results_sift = optimize_ratio_threshold(
-        ratio_thresholds=None,  # Will use default range [0.5, 0.9] in steps of 0.05
+        ratio_thresholds=None,  # Will use default range [0.4, 0.85] in steps of 0.05
         index_dataset=DatasetType.BBDD,
         query_dataset=DatasetType.QSD1_W4,
         local_descriptor_method=DescriptorMethod.SIFT,
-        preprocessing=PreprocessingMethod.GAMMA,
-        gamma=0.9,
         similarity_metric=cv.NORM_L2,
         min_matches=10,
         metric="f1@5",  # Optimize for F1@5
