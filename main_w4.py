@@ -26,7 +26,7 @@ def main():
         query_dataset=DatasetType.QSD1_W4,
         week_folder=WeekFolder.WEEK_4,
         save_results=True,
-        preprocessing=PreprocessingMethod.MEDIAN,
+        preprocessing=PreprocessingMethod.GAUSSIAN,
         similarity_metric=cv.NORM_HAMMING, 
         ratio_threshold=0.65, 
     )
