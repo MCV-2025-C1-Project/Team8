@@ -46,6 +46,45 @@ def mapk(
     return np.mean([apk(a, p, k) for a, p in zip(actual, predicted)])
 
 
+def kp_apk(
+    actual: List[Union[int, str]], predicted: List[Union[int, str]], k: int = 10
+) -> float:
+    """
+    Computes the average precision at k.
+
+    This function computes the average prescision at k between two lists of
+    items.
+    """
+    if len(predicted) > k:
+        predicted = predicted[:k]
+
+    score = 0.0
+    num_hits = 0.0
+
+    for i, p in enumerate(predicted):
+        if p in actual and p not in predicted[:i]:
+            num_hits += 1.0
+            score += num_hits / max(len(actual), len(predicted), 1)
+
+    if not actual:
+        return 0.0
+
+    return score / min(len(actual), k)
+
+
+def kp_mapk(
+    actual: List[List[Union[int, str]]],
+    predicted: List[List[Union[int, str]]],
+    k: int = 10,
+) -> float:
+    """
+    Computes the mean average precision at k (keypoint version).
+
+    This function computes the mean average prescision at k between two lists
+    of lists of items.
+    """
+    return np.mean([kp_apk(a, p, k) for a, p in zip(actual, predicted)])
+
 # Binary Mask Evaluation Metrics
 
 def precision_binary_mask(ground_truth: np.ndarray, predicted: np.ndarray) -> float:

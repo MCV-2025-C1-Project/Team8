@@ -1,7 +1,7 @@
 from dataloader.dataloader import DataLoader, DatasetType, WeekFolder
 from preprocessing.preprocessors import PreprocessingMethod
 from descriptors.descriptors import DescriptorMethod
-from utils.metrics import mapk
+from utils.metrics import kp_mapk
 
 import cv2 as cv
 from tqdm import tqdm as TQDM
@@ -185,7 +185,7 @@ class KeyPointImageRetrievalSystem:
     
     def evaluate_map_at_k(self, predictions: List[List[int]], k: int) -> float:
         """Evaluate mean Average Precision at k."""
-        return mapk(self.ground_truth, predictions, k)
+        return kp_mapk(self.ground_truth, predictions, k)
     
     def save_results(
         self,
