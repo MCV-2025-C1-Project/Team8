@@ -56,6 +56,18 @@ python main_w3.py
 3. **Task 3**: Multiple paintings detection with background removal on QSD2_W3 → BBDD
 4. **Test Phase**: DCT descriptor on QST1_W3 and multiple paintings on QST2_W3
 
+
+### Week 4 - Keypoint Detection with Local Descriptors Retrieval
+```bash
+python main_w4.py
+```
+**What it does:**
+1. **Task 1**: Keypoint detection + ORB and SIFT local descriptors
+2. **Task 2**: Find matches, filter them applying a tuned Lowe's ratio, 
+3. **Task 3**: Multiple painting retrieval (+unknowns) on QSD1_W4 → BBDD
+4. **Test Phase**: Multiple painting retrieval (+unknowns) on QST1_W4 → BBDD
+
+
 ## 📁 Project Structure
 
 ```
@@ -156,6 +168,14 @@ results/
 - **Advanced preprocessing**: Noise removal + histogram equalization combinations
 - **Comprehensive evaluation**: Noise filtering quality, retrieval performance, and background removal
 
+### Week 4 Features
+- **Keypoint detection + local descriptors**: ORB and SIFT
+- **Noise detection**: removal of noise only to those images that have some
+- **Intial brute-force keypoint matching**: using KNN matching
+- **First filtering stage**: Keep good matches with Lowe's ratio test
+- **Second filtering stage**: Keep matches that define a Homography
+- **Retrieval system evaluation**
+
 ## 🔍 Understanding the Results
 
 ### Retrieval Metrics
@@ -166,50 +186,3 @@ results/
 - **Precision**: Percentage of predicted foreground pixels that are correct
 - **Recall**: Percentage of actual foreground pixels that are detected
 - **F1-Score**: Harmonic mean of precision and recall
-
-## 🛠️ Customization
-
-### Adding New Descriptors
-1. Add new method to `DescriptorMethod` enum in `descriptors/descriptors.py`
-2. Implement the computation logic
-3. Update the `compute()` method
-
-### Adding New Preprocessing
-1. Add new method to `PreprocessingMethod` enum in `preprocessing/preprocessors.py`
-2. Implement the `apply()` method
-3. Add any required parameters
-
-### Modifying Experiments
-Edit `main_w1.py` or `main_w2.py` to:
-- Change descriptor methods
-- Modify preprocessing parameters
-- Add new evaluation metrics
-- Test different datasets
-
-## 🐛 Troubleshooting
-
-### Common Issues
-1. **Import errors**: Make sure all dependencies are installed (`pip install -r requirements.txt`)
-2. **Dataset not found**: Ensure data files are in the correct `data/` directory
-3. **Memory issues**: Reduce batch sizes or use smaller datasets
-4. **Performance issues**: Try different descriptor methods or preprocessing
-
-### Debug Mode
-Add debug prints to understand the pipeline:
-```python
-# In main_w2.py, add debug prints
-print(f"Query dataset size: {len(query_dataset.data)}")
-print(f"Index dataset size: {len(index_dataset.data)}")
-```
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-## 📄 License
-
-This project is part of a computer vision course. Please refer to the course guidelines for usage and distribution.
