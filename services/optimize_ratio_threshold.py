@@ -18,47 +18,51 @@ from dataloader.dataloader import DatasetType, WeekFolder
 from services.keypoint_image_retrieval_system import KeyPointImageRetrievalSystem
 from descriptors.descriptors import DescriptorMethod
 from preprocessing.preprocessors import PreprocessingMethod
-from utils.metrics import mapk
+from utils.metrics import kp_mapk
 import cv2 as cv
+from matplotlib import pyplot as plt
 
 
-def compute_precision_at_k(ground_truth: List[List[int]], predictions: List[List[int]], k: int = 5) -> float:
+def compute_precision_at_k(ground_truth: List[List[int]], predictions: List[List[int]], k: int = 2) -> float:
     """Compute precision@k for image retrieval."""
     precisions = []
     for gt, pred in zip(ground_truth, predictions):
         if len(pred) > k:
             pred = pred[:k]
-        if len(gt) == 0:
+        # If ground-truth is empty, treat as no relevant items
+        if not gt:
             precisions.append(0.0)
             continue
-        
-        # Count how many predicted items are in ground truth
-        hits = sum(1 for p in pred if p in gt)
-        precision = hits / len(pred) if len(pred) > 0 else 0.0
-        precisions.append(precision)
-    
+
+        # Fractional hit: number of matched ids divided by the maximum cardinality
+        # between prediction and ground truth. This makes a full match count as
+        # 1.0, a single match when one side has two items count as 0.5, etc.
+        matched = len(set(pred) & set(gt))
+        denom = max(len(pred) if len(pred) > 0 else 1, len(gt))
+        precisions.append(matched / denom)
+
     return np.mean(precisions)
 
 
-def compute_recall_at_k(ground_truth: List[List[int]], predictions: List[List[int]], k: int = 5) -> float:
+def compute_recall_at_k(ground_truth: List[List[int]], predictions: List[List[int]], k: int = 2) -> float:
     """Compute recall@k for image retrieval."""
     recalls = []
     for gt, pred in zip(ground_truth, predictions):
         if len(pred) > k:
             pred = pred[:k]
-        if len(gt) == 0:
+        # If ground-truth is empty, treat as no relevant items
+        if not gt:
             recalls.append(0.0)
             continue
-        
-        # Count how many ground truth items are in predictions
-        hits = sum(1 for g in gt if g in pred)
-        recall = hits / len(gt) if len(gt) > 0 else 0.0
-        recalls.append(recall)
-    
+
+        matched = len(set(pred) & set(gt))
+        denom = max(len(pred) if len(pred) > 0 else 1, len(gt))
+        recalls.append(matched / denom)
+
     return np.mean(recalls)
 
 
-def compute_f1_at_k(ground_truth: List[List[int]], predictions: List[List[int]], k: int = 5) -> float:
+def compute_f1_at_k(ground_truth: List[List[int]], predictions: List[List[int]], k: int = 2) -> float:
     """Compute F1@k for image retrieval."""
     precision = compute_precision_at_k(ground_truth, predictions, k)
     recall = compute_recall_at_k(ground_truth, predictions, k)
@@ -78,8 +82,8 @@ def optimize_ratio_threshold(
     preprocessing: PreprocessingMethod = PreprocessingMethod.NONE,
     similarity_metric = cv.NORM_HAMMING,
     min_matches: int = 10,
-    metric: str = "f1@5",  # Options: "f1@5", "f1@1", "map@5", "map@1"
-    k: int = 5,
+    metric: str = "f1@1",  # Options: "f1@5"
+    k: int = 2,
 ) -> Dict:
     """
     Find the optimal ratio_threshold that maximizes the specified metric.
@@ -93,8 +97,8 @@ def optimize_ratio_threshold(
         Dictionary with optimal ratio_threshold and all results
     """
     if ratio_thresholds is None:
-        # Default range: 0.4 to 0.85 in steps of 0.05
-        ratio_thresholds = np.arange(0.40, 0.85, 0.05).round(2).tolist()
+        # Default range: 0.4 to 0.9 in steps of 0.05
+        ratio_thresholds = np.arange(0.40, 0.95, 0.05).round(2).tolist()
     
     print("=" * 70)
     print(f"OPTIMIZING RATIO_THRESHOLD FOR {metric.upper()} FOR {local_descriptor_method.name} DESCRIPTOR")
@@ -129,7 +133,7 @@ def optimize_ratio_threshold(
         
         # Now retrieve with current ratio_threshold (descriptors already computed)
         predictions = []
-        for image_id, *_ in retrieval_system.query_dataset.iterate_images():
+        for image_id, image, *_ in retrieval_system.query_dataset.iterate_images():
             image_kp, image_dsc = retrieval_system.query_descriptors[image_id]
             if image_dsc is None or len(image_dsc) == 0:
                 predictions.append([-1])
@@ -137,7 +141,8 @@ def optimize_ratio_threshold(
             matches = retrieval_system.retrieve(
                 query_keypoints=image_kp,
                 query_descriptors=image_dsc,
-                n=10,
+                query_image=image,
+                n=2,
                 norm_type=similarity_metric,
                 ratio_threshold=ratio_threshold,
                 min_matches=min_matches,
@@ -146,19 +151,25 @@ def optimize_ratio_threshold(
         
         # Compute metrics
         if metric.startswith("f1"):
+            # Optimize F1 at provided k (e.g., f1@1 means k=1)
             score = compute_f1_at_k(ground_truth, predictions, k=k)
             precision = compute_precision_at_k(ground_truth, predictions, k=k)
             recall = compute_recall_at_k(ground_truth, predictions, k=k)
+            # For keypoint-aware mean AP, use kp_mapk. To preserve the "map@1"
+            # semantics used in the rest of the codebase we call kp_mapk with k=2
+            # (queries with up to 2 correct painting ids are considered a single
+            # example for map@1 evaluation).
             result = {
                 "ratio_threshold": ratio_threshold,
                 "f1": score,
                 "precision": precision,
                 "recall": recall,
-                "map@1": mapk(ground_truth, predictions, k=1),
-                "map@5": mapk(ground_truth, predictions, k=5),
+                "map@1": kp_mapk(ground_truth, predictions, k=2),
+                "map@5": kp_mapk(ground_truth, predictions, k=5),
             }
         elif metric.startswith("map"):
-            score = mapk(ground_truth, predictions, k=k)
+            # Use keypoint-aware map when evaluating map metrics as well
+            score = kp_mapk(ground_truth, predictions, k=k if k > 1 else 2)
             precision = compute_precision_at_k(ground_truth, predictions, k=k)
             recall = compute_recall_at_k(ground_truth, predictions, k=k)
             result = {
@@ -167,8 +178,9 @@ def optimize_ratio_threshold(
                 "precision": precision,
                 "recall": recall,
                 "f1@5": compute_f1_at_k(ground_truth, predictions, k=5),
-                "map@1": mapk(ground_truth, predictions, k=1),
-                "map@5": mapk(ground_truth, predictions, k=5),
+                # report both map@1 and map@5 using keypoint-aware kp_mapk
+                "map@1": kp_mapk(ground_truth, predictions, k=2),
+                "map@5": kp_mapk(ground_truth, predictions, k=5),
             }
         else:
             raise ValueError(f"Unknown metric: {metric}")
@@ -214,25 +226,27 @@ def optimize_ratio_threshold(
 if __name__ == "__main__":
     # Optimize for F1@5 (recommended for balanced precision/recall)
     results_orb = optimize_ratio_threshold(
-        ratio_thresholds=None,  # Will use default range [0.4, 0.85] in steps of 0.05
+        ratio_thresholds=None,  # Will use default range [0.40, 0.85] in steps of 0.05
         index_dataset=DatasetType.BBDD,
         query_dataset=DatasetType.QSD1_W4,
         local_descriptor_method=DescriptorMethod.ORB,
+        preprocessing=PreprocessingMethod.GAUSSIAN,
         similarity_metric=cv.NORM_HAMMING,
         min_matches=10,
-        metric="f1@5",  # Optimize for F1@5
-        k=5,
+        metric="f1@1",  # Optimize for F1@1
+        k=2,
     )
     
     results_sift = optimize_ratio_threshold(
         ratio_thresholds=None,  # Will use default range [0.4, 0.85] in steps of 0.05
         index_dataset=DatasetType.BBDD,
         query_dataset=DatasetType.QSD1_W4,
+        preprocessing=PreprocessingMethod.GAUSSIAN,
         local_descriptor_method=DescriptorMethod.SIFT,
         similarity_metric=cv.NORM_L2,
         min_matches=10,
-        metric="f1@5",  # Optimize for F1@5
-        k=5,
+        metric="f1@1",  # Optimize for F1@1
+        k=2,
     )
     
     print("\n" + "=" * 70)
@@ -240,4 +254,34 @@ if __name__ == "__main__":
     print("=" * 70)
     print(f"Use ratio_threshold={results_orb['best_ratio_threshold']:.2f} in main_w4.py")
     print(f"Use ratio_threshold={results_sift['best_ratio_threshold']:.2f} in main_w4.py")
+
+    # Plot F1 vs ratio_threshold for ORB
+    try:
+        orb_thresholds = [r['ratio_threshold'] for r in results_orb['all_results']]
+        orb_f1 = [r.get('f1', 0.0) for r in results_orb['all_results']]
+        plt.figure(figsize=(8, 4))
+        plt.plot(orb_thresholds, orb_f1, marker='o')
+        plt.title('ORB: F1 vs Lowe ratio threshold')
+        plt.xlabel('ratio_threshold')
+        plt.ylabel('F1')
+        plt.grid(True)
+        plt.tight_layout()
+        plt.show()
+    except Exception:
+        print('Could not plot ORB results (missing data).')
+
+    # Plot F1 vs ratio_threshold for SIFT
+    try:
+        sift_thresholds = [r['ratio_threshold'] for r in results_sift['all_results']]
+        sift_f1 = [r.get('f1', 0.0) for r in results_sift['all_results']]
+        plt.figure(figsize=(8, 4))
+        plt.plot(sift_thresholds, sift_f1, marker='o', color='orange')
+        plt.title('SIFT: F1 vs Lowe ratio threshold')
+        plt.xlabel('ratio_threshold')
+        plt.ylabel('F1')
+        plt.grid(True)
+        plt.tight_layout()
+        plt.show()
+    except Exception:
+        print('Could not plot SIFT results (missing data).')
 

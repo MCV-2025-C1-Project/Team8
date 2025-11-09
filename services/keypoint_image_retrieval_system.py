@@ -292,7 +292,7 @@ class KeyPointImageRetrievalSystem:
                 query_keypoints=image_kp,
                 query_descriptors=image_dsc,
                 query_image=image,
-                n=2,  # Use K=10 for competition format
+                n=2,  
                 norm_type=similarity_metric,
                 ratio_threshold=ratio_threshold,
                 min_matches=min_matches,
