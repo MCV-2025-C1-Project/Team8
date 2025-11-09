@@ -1,4 +1,6 @@
 from matplotlib import pyplot as plt
+import cv2 as cv
+import numpy as np
 
 
 # Helper function: crop a centered region
@@ -101,3 +103,63 @@ def plot_gaussian_psnr(
 
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     plt.show()
+
+
+def plot_kp_results(query_image, query_kp, index_image, index_kp, good_matches, homography_matches, H, scale=0.5):
+    """
+    Visualize keypoint matches and draw the outline of the index image
+    projected onto the query image using homography.
+    """
+    query_image = cv.cvtColor(query_image, cv.COLOR_RGB2BGR)
+    index_image = cv.cvtColor(index_image, cv.COLOR_RGB2BGR)
+
+    matched_vis = cv.drawMatches(
+        query_image, query_kp,
+        index_image, index_kp,
+        good_matches, None,
+        flags=cv.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS
+    )
+    
+    for m in good_matches:
+        pt1 = tuple(np.round(query_kp[m.queryIdx].pt).astype(int))
+        pt2 = tuple(np.round(index_kp[m.trainIdx].pt).astype(int))
+        pt2 = (pt2[0] + query_image.shape[1], pt2[1])
+        cv.line(matched_vis, pt1, pt2, (0, 0, 255), 2, cv.LINE_AA)
+
+    for m in homography_matches:
+        pt1 = tuple(np.round(query_kp[m.queryIdx].pt).astype(int))
+        pt2 = tuple(np.round(index_kp[m.trainIdx].pt).astype(int))
+        pt2 = (pt2[0] + query_image.shape[1], pt2[1])
+        cv.line(matched_vis, pt1, pt2, (0, 255, 0), 2, cv.LINE_AA)
+
+    if H is not None:
+        # Invert homography to map index to query
+        H_inv = np.linalg.inv(H)
+
+        h, w = index_image.shape[:2]
+        scale = 500/w
+        index_corners = np.float32([
+            [0, 0], [0, h - 1],
+            [w - 1, h - 1], [w - 1, 0]
+        ]).reshape(-1, 1, 2)
+
+
+        dst_corners = cv.perspectiveTransform(index_corners, H_inv)
+        query_with_poly = cv.polylines(
+            query_image.copy(),
+            [np.int32(dst_corners)],
+            True,
+            (0, 255, 0), 3, cv.LINE_AA
+        )
+
+        def resize(img, scale):
+            return cv.resize(img, (int(img.shape[1] * scale), int(img.shape[0] * scale)))
+
+        matched_vis_small = resize(matched_vis, scale)
+        query_with_poly_small = resize(query_with_poly, scale)
+
+        # Show the results
+        cv.imshow("Query with Index Outline", query_with_poly_small)
+        cv.imshow("Matches (Query vs. Index)", matched_vis_small)
+        cv.waitKey(0)
+        cv.destroyAllWindows()

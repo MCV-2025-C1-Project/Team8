@@ -2,6 +2,7 @@ from dataloader.dataloader import DataLoader, DatasetType, WeekFolder
 from preprocessing.preprocessors import PreprocessingMethod
 from descriptors.descriptors import DescriptorMethod
 from utils.metrics import kp_mapk
+from utils.plots import plot_kp_results
 
 import cv2 as cv
 from tqdm import tqdm as TQDM
@@ -78,10 +79,12 @@ class KeyPointImageRetrievalSystem:
             self,
             query_keypoints,
             query_descriptors,
+            query_image,
             n=5, # images to retrieve
             norm_type=cv.NORM_HAMMING,
             ratio_threshold=0.75,
             min_matches=10,
+            visualise=False,
         ):
         matcher = cv.BFMatcher(normType=norm_type)
 
@@ -90,7 +93,7 @@ class KeyPointImageRetrievalSystem:
             return [-1]
 
         results = []
-        for image_id, *_ in self.index_dataset.iterate_images():
+        for image_id, image, *_ in self.index_dataset.iterate_images():
             keypoints, descriptors = self.index_descriptors[image_id]
 
             # Skip this index image if its descriptors are None or empty
@@ -140,6 +143,9 @@ class KeyPointImageRetrievalSystem:
             n_inliers = int(mask.sum())
             matches_mask = mask.ravel().tolist()
             inlier_ratio = sum(matches_mask) / len(good_matches) if len(good_matches) > 0 else 0
+            homography_matches = [
+                match for i, match in enumerate(good_matches) if matches_mask[i]
+            ]
             
             # Score: Weighted combination of quantity (n_inliers) and quality (inlier_ratio)
             # This balances both the number of matches and their geometric consistency
@@ -158,6 +164,18 @@ class KeyPointImageRetrievalSystem:
                 "good_matches": good_matches,
                 "centroid": np.mean(src_pts, axis=0).flatten().tolist(),
             })
+
+            if visualise:
+                plot_kp_results(
+                    query_image=query_image,
+                    query_kp=query_keypoints,
+                    index_image=image,
+                    index_kp=keypoints,
+                    good_matches=good_matches,
+                    homography_matches=homography_matches,
+                    H=H,
+                )
+
 
         # Sort results by score (descending) - higher score = better match
         results.sort(key=lambda x: x["score"], reverse=True)
@@ -236,6 +254,7 @@ class KeyPointImageRetrievalSystem:
         similarity_metric=cv.NORM_HAMMING,
         ratio_threshold=0.75,
         min_matches=10,
+        visualise=False,
         **preprocessing_kwargs
     ):
         
@@ -262,9 +281,8 @@ class KeyPointImageRetrievalSystem:
             desc="Retrieving matches"
         )
         
-        for image_id, *_ in progress_bar:
+        for image_id, image, *_ in progress_bar:
             image_kp, image_dsc = self.query_descriptors[image_id]
-            
             # Handle case where descriptors might be None (no keypoints detected)
             if image_dsc is None or len(image_dsc) == 0:
                 predictions.append([-1])
@@ -273,10 +291,12 @@ class KeyPointImageRetrievalSystem:
             matches = self.retrieve(
                 query_keypoints=image_kp,
                 query_descriptors=image_dsc,
+                query_image=image,
                 n=2,  # Use K=10 for competition format
                 norm_type=similarity_metric,
                 ratio_threshold=ratio_threshold,
                 min_matches=min_matches,
+                visualise=visualise,
             )
             predictions.append(matches)
         
