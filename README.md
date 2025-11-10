@@ -2,6 +2,10 @@
 
 This project implements a comprehensive image retrieval system with background removal capabilities for computer vision applications.
 
+## 👨🏻‍🏫 Presentation
+
+Available [here](https://docs.google.com/presentation/d/1ulzb7NgGW8-LyWulwsufVr9EqZ8gfMwNDAlQaJ7Rzqw/edit?usp=sharing).
+
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -75,27 +79,45 @@ Team8/
 ├── data/                           # Dataset files
 │   ├── qsd1_w1/                   # Week 1 query dataset
 │   ├── qsd2_w2/                   # Week 2 query dataset (with background removal)
+|   ├── ...
 │   └── BBDD/                      # Index dataset
 ├── dataloader/                    # Dataset loading utilities
 │   └── dataloader.py
 ├── descriptors/                   # Image descriptor methods
 │   ├── descriptors.py            # Main descriptor enum
 │   ├── color_histograms.py       # Color histogram functions
+│   ├── keypoint_descriptors.py   # Keypoint descriptors functions
+│   ├── texture_descriptors.py    # Texture descriptors functions
+│   ├── three_d_histograms.py       # 3D histogram functions
 │   └── spatial_histograms.py    # Spatial histogram functions
 ├── preprocessing/                 # Image preprocessing
 │   ├── preprocessors.py         # Unified preprocessing enum
 │   ├── color_adjustments.py     # Color adjustment functions
+│   ├── noise_detector.py        # Noise detection functions
 │   └── background_removers.py   # Background removal methods
-├── services/                      # Main system services
+├── scripts/                      # Helper scripts
+│   ├── contrast_comparison.py     # Contrast comparison visualisation
+│   ├── print_pickle_contents.py   # Pickle helper
+│   ├── test_background_removal_methods.py  # Testing helper
+│   ├── test_lbp.py                # Testing helper
+│   └── visualize_noise_removal.py  # Noise removal visualisation
+├── services/                       # Main system services
 │   ├── image_retrieval_system.py           # Basic retrieval system
+│   ├── keypoint_image_retrieval_system.py  # ORB/SIFT retrieval system
+│   ├── noise_filtering_assessment.py
+│   ├── optimize_ratio_threshold.py         # Lowe's ratio opt. for ORB and SIFT
 │   └── background_removal_image_retrieval_system.py  # Combined system
 ├── utils/                         # Utility functions
 │   ├── metrics.py               # Evaluation metrics
 │   ├── measures.py              # Similarity measures
+│   ├── dct.py                   # DCT implementation
+│   ├── patches.py               # DCT helper function
+│   ├── plots.py
 │   └── spatial.py               # Spatial processing
 ├── main_w1.py                    # Week 1 experiments
 ├── main_w2.py                    # Week 2 experiments
 ├── main_w3.py                    # Week 3 experiments
+├── main_w4.py                    # Week 4 experiments
 ├── requirements.txt              # Dependencies
 └── README.md                     # This file
 ```
